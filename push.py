@@ -60,5 +60,38 @@ try:
 except subprocess.CalledProcessError:
     print("Error pushing to remote repository. Make sure the remote repository URL is correct and you have the necessary permissions.")
 
+
+# 命令行输入
+# python push.py https://github.com/helloworlder8/ultralytics-8.2.60.git
+
+
+# 远程删除
+# git push origin --delete 24-07-30
+# 本地删除
+# git branch -d 24-07-30
+
+# 手动推送
 # git push -u origin 24-07-30
-# python push.py https://github.com/helloworlder8/1.git
+
+
+
+# 调试文件
+# launch.json文件
+# {
+#     // 使用 IntelliSense 了解相关属性。 
+#     // 悬停以查看现有属性的描述。
+#     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+#     "version": "0.2.0",
+#     "configurations": [
+#         {
+#             "name": "Python 调试程序: 当前文件",
+#             "type": "debugpy",
+#             "request": "launch",
+#             "program": "${file}",
+#             "console": "integratedTerminal",
+#             "args": [
+#                 "https://github.com/helloworlder8/ultralytics-8.2.60.git",
+#             ]
+#         }
+#     ]
+# }
