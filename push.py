@@ -71,9 +71,15 @@ except subprocess.CalledProcessError:
 # git branch -d 24-07-30
 
 # 手动推送
-# git push -u origin 24-07-30
+# git init
+# git remote add origin https://github.com/helloworlder8/ultralytics-8.2.60.git
+# git branch
+# git add -A
+# git commit -m "24-07-31"
+# git push -u origin 24-07-31
 
-
+#helloworlder8
+#ghp_3evWUSgNgYio9UWL4H0C6yxqgrU33x4FUlww
 
 # 调试文件
 # launch.json文件
