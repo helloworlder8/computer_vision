@@ -224,7 +224,7 @@ class TaskAlignedAssigner(nn.Module):
         """
         # Compute batch indices and update selected box indices
         batch_indices = torch.arange(self.batch_size, dtype=torch.int64, device=gt_labels.device)[..., None]  # torch.Size([2, 1])
-        foreground_mask_index += batch_indices * self.max_boxes  # (b, h*w) torch.Size([2, 8400])
+        foreground_mask_index = foreground_mask_index + batch_indices * self.max_boxes  #魔鬼细节 (b, h*w) torch.Size([2, 8400])
 
         # Retrieve target labels
         target_labels = gt_labels.long().flatten()[foreground_mask_index]  # (b, h*w) torch.Size([2, 8400])
