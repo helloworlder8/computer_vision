@@ -87,7 +87,7 @@ class ClassificationValidator(BaseValidator):
 
     def print_results(self):
         """Prints evaluation metrics for YOLO object detection model."""
-        pf = "%22s" + "%11.3g" * len(self.metrics.keys)  # print format
+        pf = "%22s" + "%11.3g" * len(self.metrics.results_dict)  # print format
         LOGGER.info(pf % ("all", self.metrics.top1, self.metrics.top5))
 
     def plot_val_samples(self, batch, ni):

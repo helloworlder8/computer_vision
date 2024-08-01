@@ -814,7 +814,7 @@ class Annotator:
 
 
 @TryExcept()  # known issue https://github.com/ultralytics/yolov5/issues/5395
-@plt_settings()
+@plt_settings() #边框 类别 对应名字 保存路径
 def plot_labels(boxes, cls, names=(), save_dir=Path(""), on_plot=None):
     """Plot training labels including class histograms and box statistics."""
     import pandas  # scope for faster 'import ultralytics'
@@ -828,9 +828,9 @@ def plot_labels(boxes, cls, names=(), save_dir=Path(""), on_plot=None):
     LOGGER.info(f"Plotting labels to {save_dir / 'labels.jpg'}... ")
     nc = int(cls.max() + 1)  # number of classes
     boxes = boxes[:1000000]  # limit to 1M boxes
-    x = pandas.DataFrame(boxes, columns=["x", "y", "width", "height"])
+    x = pandas.DataFrame(boxes, columns=["x", "y", "width", "height"]) #标签
 
-    # Seaborn correlogram
+    # Seaborn correlogram #第一张图 labels_correlogram.jpg
     seaborn.pairplot(x, corner=True, diag_kind="auto", kind="hist", diag_kws=dict(bins=50), plot_kws=dict(pmax=0.9))
     plt.savefig(save_dir / "labels_correlogram.jpg", dpi=200)
     plt.close()
@@ -847,7 +847,7 @@ def plot_labels(boxes, cls, names=(), save_dir=Path(""), on_plot=None):
     else:
         ax[0].set_xlabel("classes")
     seaborn.histplot(x, x="x", y="y", ax=ax[2], bins=50, pmax=0.9)
-    seaborn.histplot(x, x="width", y="height", ax=ax[3], bins=50, pmax=0.9)
+    seaborn.histplot(x, x="width", y="height", ax=ax[3], bins=50, pmax=0.9) #231
 
     # Rectangles
     boxes[:, 0:2] = 0.5  # center
@@ -856,7 +856,7 @@ def plot_labels(boxes, cls, names=(), save_dir=Path(""), on_plot=None):
     for cls, box in zip(cls[:500], boxes[:500]):
         ImageDraw.Draw(img).rectangle(box, width=1, outline=colors(cls))  # plot
     ax[1].imshow(img)
-    ax[1].axis("off")
+    ax[1].axis("off") #画前500个框
 
     for a in [0, 1, 2, 3]:
         for s in ["top", "right", "left", "bottom"]:
@@ -985,7 +985,7 @@ def plot_images(
     mosaic = np.full((int(ns * h), int(ns * w), 3), 255, dtype=np.uint8)  # init
     for i in range(bs):
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
-        mosaic[y : y + h, x : x + w, :] = images[i].transpose(1, 2, 0)
+        mosaic[y : y + h, x : x + w, :] = images[i].transpose(1, 2, 0) #画图
 
     # Resize (optional)
     scale = max_size / ns / max(h, w)
@@ -1007,7 +1007,7 @@ def plot_images(
             classes = cls[idx].astype("int")
             labels = confs is None
 
-            if len(bboxes):
+            if len(bboxes): #画框
                 boxes = bboxes[idx]
                 conf = confs[idx] if confs is not None else None  # check for confidence presence (label vs pred)
                 if len(boxes):
@@ -1083,7 +1083,7 @@ def plot_images(
         on_plot(fname)
 
 
-@plt_settings()
+# @plt_settings()
 def plot_results(file="path/to/results.csv", dir="", segment=False, pose=False, classify=False, on_plot=None):
     """
     Plot training results from a results CSV file. The function supports various types of data including segmentation,
@@ -1122,19 +1122,19 @@ def plot_results(file="path/to/results.csv", dir="", segment=False, pose=False, 
         fig, ax = plt.subplots(2, 5, figsize=(12, 6), tight_layout=True)
         index = [1, 2, 3, 4, 5, 8, 9, 10, 6, 7]
     ax = ax.ravel()
-    files = list(save_dir.glob("results*.csv"))
+    files = list(save_dir.glob("results*.csv")) #支持多个结果文件
     assert len(files), f"No results.csv files found in {save_dir.resolve()}, nothing to plot."
     for f in files:
         try:
             data = pd.read_csv(f)
-            s = [x.strip() for x in data.columns]
-            x = data.values[:, 0]
+            title = [x.strip() for x in data.columns]
+            epoch = data.values[:, 0] #x轴轮次
             for i, j in enumerate(index):
-                y = data.values[:, j].astype("float")
+                values = data.values[:, j].astype("float")
                 # y[y == 0] = np.nan  # don't show zero values
-                ax[i].plot(x, y, marker=".", label=f.stem, linewidth=2, markersize=8)  # actual results
-                ax[i].plot(x, gaussian_filter1d(y, sigma=3), ":", label="smooth", linewidth=2)  # smoothing line
-                ax[i].set_title(s[j], fontsize=12)
+                ax[i].plot(epoch, values, marker=".", label=f.stem, linewidth=2, markersize=8)  # actual results
+                ax[i].plot(epoch, gaussian_filter1d(values, sigma=3), ":", label="smooth", linewidth=2)  # smoothing line
+                ax[i].set_title(title[j], fontsize=12)
                 # if j in {8, 9, 10}:  # share train and val loss y axes
                 #     ax[i].get_shared_y_axes().join(ax[i], ax[i - 5])
         except Exception as e:

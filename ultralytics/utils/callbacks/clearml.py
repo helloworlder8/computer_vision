@@ -69,7 +69,7 @@ def on_pretrain_routine_start(trainer):
         else:
             task = Task.init(
                 project_name=trainer.args.project or "YOLOv8",
-                task_name=trainer.args.name,
+                task=trainer.args.name,
                 tags=["YOLOv8"],
                 output_uri=True,
                 reuse_last_task_id=False,

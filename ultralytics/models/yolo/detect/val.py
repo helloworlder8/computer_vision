@@ -330,7 +330,7 @@ class DetectionValidator(BaseValidator):
                 if self.is_lvis:
                     val.print_results()  # explicitly call print_results
                 # update mAP50-95 and mAP50
-                stats[self.metrics.keys[-1]], stats[self.metrics.keys[-2]] = (
+                stats[self.metrics.results_dict[-1]], stats[self.metrics.results_dict[-2]] = (
                     val.stats[:2] if self.is_coco else [val.results["AP50"], val.results["AP"]]
                 )
             except Exception as e:

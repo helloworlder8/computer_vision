@@ -27,7 +27,7 @@ class TritonRemoteModel:
         Initialize the TritonRemoteModel.
 
         Arguments may be provided individually or parsed from a collective 'url' argument of the form
-            <scheme>://<netloc>/<endpoint>/<task_name>
+            <scheme>://<netloc>/<endpoint>/<task>
 
         Args:
             url (str): The URL of the Triton server.

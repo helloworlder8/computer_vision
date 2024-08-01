@@ -310,7 +310,7 @@ class SegmentationValidator(DetectionValidator):
                     eval.accumulate()
                     eval.summarize()
                     idx = i * 4 + 2
-                    stats[self.metrics.keys[idx + 1]], stats[self.metrics.keys[idx]] = eval.stats[
+                    stats[self.metrics.results_dict[idx + 1]], stats[self.metrics.results_dict[idx]] = eval.stats[
                         :2
                     ]  # update mAP50-95 and mAP50
             except Exception as e:

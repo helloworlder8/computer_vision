@@ -66,9 +66,9 @@ except subprocess.CalledProcessError:
 
 
 # 远程删除
-# git push origin --delete 24-07-30
+# git push origin --delete 24-07-31
 # 本地删除
-# git branch -d 24-07-30
+# git branch -d 24-07-31
 
 # 手动推送
 # git init
@@ -76,7 +76,7 @@ except subprocess.CalledProcessError:
 # git branch
 # git add -A
 # git commit -m "24-07-31"
-# git push -u origin 24-07-31
+# git push -u origin 24-07-30
 
 #helloworlder8
 #ghp_3evWUSgNgYio9UWL4H0C6yxqgrU33x4FUlww

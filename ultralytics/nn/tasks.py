@@ -7,6 +7,8 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
+from ultralytics.nn.extra_modules import *
+
 from ultralytics.nn.modules import (
     AIFI,
     C1,
@@ -78,6 +80,9 @@ from ultralytics.utils.torch_utils import (
     time_sync,
 )
 
+
+
+    
 try:
     import thop
 except ImportError:
@@ -956,6 +961,9 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
             PSA,
             SCDown,
             C2fCIB,
+            
+            ASSNET,
+            CoordAttv2,
         }:
             c1, c2 = ch[f], args[0] #输入 输出
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
@@ -967,7 +975,8 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
                 )  # num heads
 
             args = [c1, c2, *args[1:]] # imp 总结 输入前一层 输出 第一个参数成宽度超参数 剩下的就是后面的参数
-            if m in {BottleneckCSP, C1, C2, C2f, C2fAttn, C3, C3TR, C3Ghost, C3x, RepC3, C2fCIB}:
+            if m in {BottleneckCSP, C1, C2, C2f, C2fAttn, C3, C3TR, C3Ghost, C3x, RepC3, C2fCIB,
+                     ASSNET}:
                 args.insert(2, n)  # number of repeats 输出 输出 多少个 后面的参数
                 n = 1
         elif m is AIFI:
@@ -1018,10 +1027,10 @@ def create_model_dict(model_yaml):
     import re
 
     model_path = Path(model_yaml)
-    if model_path.stem in (f"yolov{d}{x}6" for x in "nsmlx" for d in (5, 8)):
-        new_stem = re.sub(r"(\d+)([nslmx])6(.+)?$", r"\1\2-p6\3", model_path.stem)
-        LOGGER.warning(f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {model_path.stem} to {new_stem}.")
-        model_path = model_path.with_name(new_stem + model_path.suffix)
+    # if model_path.stem in (f"yolov{d}{x}6" for x in "nsmlx" for d in (5, 8)):
+    #     new_stem = re.sub(r"(\d+)([nslmx])6(.+)?$", r"\1\2-p6\3", model_path.stem)
+    #     LOGGER.warning(f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {model_path.stem} to {new_stem}.")
+    #     model_path = model_path.with_name(new_stem + model_path.suffix)
 
     unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(model_path))  # i.e. yolov8x.yaml -> yolov8.yaml
     model_yaml = check_yaml(unified_path, hard=False) or check_yaml(model_path)

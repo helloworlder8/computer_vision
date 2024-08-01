@@ -50,7 +50,12 @@ from ultralytics.utils.torch_utils import (
     strip_optimizer,
     torch_distributed_zero_first,
 )
-
+import re
+import shutil
+import glob
+from pathlib import Path
+FILE = Path(__file__).resolve()
+ROOT = FILE.parents[2]  # YOLO
 
 class BaseTrainer:
     """
@@ -121,7 +126,7 @@ class BaseTrainer:
     def _init_dirs(self): #权重路径和训练参数
         """Initialize directories."""
         self.save_dir = get_save_dir(self.args) #项目 名   任务 模式
-        self.args.name = self.save_dir.name #path的成员方法（重载的）
+        self.args.name = self.save_dir.name #相当于模式默认是名称
 
         self.args.save_dir = str(self.save_dir)
 
@@ -132,6 +137,18 @@ class BaseTrainer:
         if RANK in {-1, 0}:
             self.wdir.mkdir(parents=True, exist_ok=True)
             yaml_save(self.save_dir / "args.yaml", vars(self.args))
+        if self.args.model_name.endswith('.yaml'):
+            # 使用正则表达式替换，去掉数字和 'n', 's', 'l', 'm', 'x' 后缀
+            unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(self.args.model_name))  # 例如 yolov8x.yaml -> yolov8.yaml
+            
+            # 查找匹配的文件
+            model_name = glob.glob(str(ROOT / "**" / unified_path), recursive=True) or glob.glob(str(ROOT.parent / unified_path))
+            
+            if model_name:  # 确保找到模型文件
+                shutil.copy(model_name[0], self.save_dir)  # 复制模型文件到指定目录
+            else:
+                print("是预训练权重文件不拷贝了")
+            shutil.copy(self.args.data, self.save_dir)
         self.last, self.best = self.wdir / "last.pt", self.wdir / "best.pt"
 
     def _init_data_dict_and_dataset(self):
@@ -294,10 +311,10 @@ class BaseTrainer:
 
         # Check AMP
         self.amp = torch.tensor(self.args.amp).to(self.device)  # True or False
-        if self.amp and RANK in {-1, 0}:  # Single-GPU and DDP
-            callbacks_backup = callbacks.default_callbacks.copy()  # backup callbacks as check_amp() resets them
-            self.amp = torch.tensor(check_amp(self.model), device=self.device)
-            callbacks.default_callbacks = callbacks_backup  # restore callbacks
+        # if self.amp and RANK in {-1, 0}:  # Single-GPU and DDP
+        #     callbacks_backup = callbacks.default_callbacks.copy()  # backup callbacks as check_amp() resets them
+        #     self.amp = torch.tensor(check_amp(self.model), device=self.device)
+        #     callbacks.default_callbacks = callbacks_backup  # restore callbacks
         if RANK > -1 and world_size > 1:  # DDP
             dist.broadcast(self.amp, src=0)  # broadcast the tensor from rank 0 to all other ranks (returns None)
         self.amp = bool(self.amp)  # as boolean
@@ -332,7 +349,7 @@ class BaseTrainer:
             self.metrics = dict(zip(metric_keys, [0] * len(metric_keys))) #指标字典
             self.ema = ModelEMA(self.model)
             if self.args.plots:
-                self.plot_training_labels()
+                self.plot_training_labels() #labels_correlogram.jpg labels.jpg
 
         # Optimizer
         self.accumulate = max(round(self.args.nbs / self.batch_size), 1)  # accumulate loss before optimizing
@@ -374,7 +391,7 @@ class BaseTrainer:
             
             current_epoch += 1
         
-        self._final_eval_plot_metrics(current_epoch) #画最后的图 模型优化
+        self._final_eval_plot_results(current_epoch) #画最后的图 模型优化
         self.run_callbacks("teardown")
 
     def _initialize_training_state(self, world_size):
@@ -433,7 +450,7 @@ class BaseTrainer:
                 self.optimizer_step()
                 self.last_opt_step = ni
             
-            self._log_batch_progress( batch, ni)
+            self._log_plot_batch_progress( batch, ni)
             self.run_callbacks("on_train_batch_end")
             
             
@@ -458,13 +475,13 @@ class BaseTrainer:
                 if "momentum" in x:
                     x["momentum"] = np.interp(ni, xi, [self.args.warmup_momentum, self.args.momentum])
 
-    def _log_batch_progress(self, batch, ni):
+    def _log_plot_batch_progress(self, batch, ni):
         """Log the progress of the current batch."""
         mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"
         loss_len = self.avg_loss_items.shape[0] if len(self.avg_loss_items.shape) else 1
         avg_loss_items = self.avg_loss_items if loss_len > 1 else torch.unsqueeze(self.avg_loss_items, 0)
         if RANK in {-1, 0}:
-            self.pbar.set_description(
+            self.pbar.set_description( #打印
                 ("%11s" * 2 + "%11.4g" * (2 + loss_len))
                 % (f"{self.current_epoch + 1}/{self.total_epochs}", mem, *avg_loss_items, batch["cls"].shape[0], batch["img"].shape[-1])
             )
@@ -516,7 +533,7 @@ class BaseTrainer:
             dist.broadcast_object_list(broadcast_list, 0)
             self.stop = broadcast_list[0]
 
-    def _final_eval_plot_metrics(self, current_epoch):
+    def _final_eval_plot_results(self, current_epoch):
         """Finalize training and perform any necessary cleanup."""
         if RANK in {-1, 0}:
             LOGGER.info(
@@ -525,7 +542,7 @@ class BaseTrainer:
             )
             self.final_eval()
             if self.args.plots:
-                self.plot_metrics()
+                self.plot_results()
             self.run_callbacks("on_train_end")
         gc.collect()
         torch.cuda.empty_cache()
@@ -688,7 +705,7 @@ class BaseTrainer:
         with open(self.csv, "a") as f:
             f.write(s + ("%23.5g," * n % tuple([self.current_epoch + 1] + vals)).rstrip(",") + "\n")
 
-    def plot_metrics(self):
+    def plot_results(self):
         """Plot and display metrics visually."""
         pass
 

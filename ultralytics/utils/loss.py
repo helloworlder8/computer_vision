@@ -220,16 +220,16 @@ class DetectionLoss:
 
         # Targets
         targets = torch.cat((batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1)
-        targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
-        gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
+        gt_targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
+        gt_labels, gt_bboxes = gt_targets.split((1, 4), 2)  # cls, xyxy
         gt_mask = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
 
         # Pboxes
-        pd_bboxes = self.bbox_decode(anc_points, pd_distri)  # xyxy, (b, h*w, 4)
+        pd_bboxes_pyramid = self.bbox_decode(anc_points, pd_distri)  # xyxy, (b, h*w, 4)
 
-        _, target_bboxes, target_scores, foreground_mask, _ = self.assigner(
+        _, target_bboxes, target_scores, _, foreground_mask = self.assigner(
             pd_scores.detach().sigmoid(),
-            (pd_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
+            (pd_bboxes_pyramid.detach() * stride_tensor).type(gt_bboxes.dtype),
             anc_points * stride_tensor,
             gt_labels,
             gt_bboxes,
@@ -246,7 +246,7 @@ class DetectionLoss:
         if foreground_mask.sum():
             target_bboxes /= stride_tensor
             loss[0], loss[2] = self.bbox_loss(
-                pd_distri, pd_bboxes, anc_points, target_bboxes, target_scores, target_scores_sum, foreground_mask
+                pd_distri, pd_bboxes_pyramid, anc_points, target_scores, target_bboxes, target_scores_sum, foreground_mask
             )
 
         loss[0] *= self.hyp.box  # box gain

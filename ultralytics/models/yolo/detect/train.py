@@ -134,7 +134,7 @@ class DetectionTrainer(BaseTrainer):
             on_plot=self.on_plot,
         )
 
-    def plot_metrics(self):
+    def plot_results(self):
         """Plots metrics from a CSV file."""
         plot_results(file=self.csv, on_plot=self.on_plot)  # save results.png
 

@@ -76,6 +76,6 @@ class PoseTrainer(yolo.detect.DetectionTrainer):
             on_plot=self.on_plot,
         )
 
-    def plot_metrics(self):
+    def plot_results(self):
         """Plots training/val metrics."""
         plot_results(file=self.csv, pose=True, on_plot=self.on_plot)  # save results.png

@@ -25,70 +25,7 @@ from ultralytics.utils import (
 
 # class Model(nn.Module):
 class BaseProject(nn.Module): #更多的像一个项目
-    """
-    A base class for implementing YOLO models, unifying APIs across different model types.
 
-    This class provides a common interface for various operations related to YOLO models, such as training,
-    validation, prediction, exporting, and benchmarking. It handles different types of models, including those
-    loaded from local files, Ultralytics HUB, or Triton Server. The class is designed to be flexible and
-    extendable for different tasks and model configurations.
-
-    Args:
-        model (Union[str, Path], optional): Path or name of the model to load or create. This can be a local file
-            path, a model name from Ultralytics HUB, or a Triton Server model. Defaults to 'yolov8n.pt'.
-        task (Any, optional): The task type associated with the YOLO model. This can be used to specify the model's
-            application domain, such as object detection, segmentation, etc. Defaults to None.
-        verbose (bool, optional): If True, enables verbose output during the model's operations. Defaults to False.
-
-    Attributes:
-        callbacks (dict): A dictionary of callback functions for various events during model operations.
-        predictor (BasePredictor): The predictor object used for making predictions.
-        model (nn.Module): The underlying PyTorch model.
-        trainer (BaseTrainer): The trainer object used for training the model.
-        ckpt (dict): The checkpoint data if the model is loaded from a *.pt file.
-        cfg (str): The configuration of the model if loaded from a *.yaml file.
-        ckpt_path (str): The path to the checkpoint file.
-        overrides (dict): A dictionary of overrides for model configuration.
-        metrics (dict): The latest training/validation metrics.
-        session (HUBTrainingSession): The Ultralytics HUB session, if applicable.
-        task (str): The type of task the model is intended for.
-        model_name (str): The name of the model.
-
-    Methods:
-        __call__: Alias for the predict method, enabling the model instance to be callable.
-        _new: Initializes a new model based on a configuration file.
-        _load: Loads a model from a checkpoint file.
-        _check_is_pytorch_model: Ensures that the model is a PyTorch model.
-        reset_weights: Resets the model's weights to their initial state.
-        load: Loads model weights from a specified file.
-        save: Saves the current state of the model to a file.
-        info: Logs or returns information about the model.
-        fuse: Fuses Conv2d and BatchNorm2d layers for optimized inference.
-        predict: Performs object detection predictions.
-        track: Performs object tracking.
-        val: Validates the model on a dataset.
-        benchmark: Benchmarks the model on various export formats.
-        export: Exports the model to different formats.
-        train: Trains the model on a dataset.
-        tune: Performs hyperparameter tuning.
-        _apply: Applies a function to the model's tensors.
-        add_callback: Adds a callback function for an event.
-        clear_callback: Clears all callbacks for an event.
-        reset_callbacks: Resets all callbacks to their default functions.
-        is_triton_model: Checks if a model is a Triton Server model.
-        is_hub_model: Checks if a model is an Ultralytics HUB model.
-        _reset_ckpt_args: Resets checkpoint arguments when loading a PyTorch model.
-        _task_map: Loads the appropriate module based on the model task.
-        task_map: Provides a mapping from model tasks to corresponding classes.
-
-    Raises:
-        FileNotFoundError: If the specified model file does not exist or is inaccessible.
-        ValueError: If the model file or configuration is invalid or unsupported.
-        ImportError: If required dependencies for specific model types (like HUB SDK) are not installed.
-        TypeError: If the model is not a PyTorch model when required.
-        AttributeError: If required attributes or methods are not implemented or available.
-        NotImplementedError: If a specific model task or mode is not supported.
-    """
 
     def __init__(
         self,
@@ -132,7 +69,7 @@ class BaseProject(nn.Module): #更多的像一个项目
 
     def _set_init_properties(self,task):
         self.callbacks = callbacks.get_default_callbacks() 
-        self.task = task  # task_name type
+        self.task = task  # task type
         self.overrides = {}  # overrides for trainer object
         self.model = None  # model object
 
@@ -172,7 +109,7 @@ class BaseProject(nn.Module): #更多的像一个项目
 
     @staticmethod
     def is_triton_model(model: str) -> bool:
-        """Is model a Triton Server URL string, i.e. <scheme>://<netloc>/<endpoint>/<task_name>"""
+        """Is model a Triton Server URL string, i.e. <scheme>://<netloc>/<endpoint>/<task>"""
         from urllib.parse import urlsplit
 
         url = urlsplit(model)

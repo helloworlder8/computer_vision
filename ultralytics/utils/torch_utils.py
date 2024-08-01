@@ -645,7 +645,7 @@ class EarlyStopping:
         self.best_fitness = 0.0  # i.e. mAP
         self.best_epoch = 0
         self.patience = patience or float("inf")  # epochs to wait after fitness stops improving to stop
-        self.possible_stop = False  # possible stop may occur next current_epoch
+        self.possible_stop = False  # possible stop may occur next current_epoch 给画图用的
 
     def __call__(self, current_epoch, fitness):
         """
