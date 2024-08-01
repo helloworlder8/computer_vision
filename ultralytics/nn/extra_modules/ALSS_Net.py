@@ -5,8 +5,8 @@ import torch.nn as nn
 from ultralytics.nn.modules import Conv
 
 __all__ = (
-    "CoordAttv2",
-    "ASSNET",
+    "LCA",
+    "ALSS",
 )
 
 class Identity(nn.Module):
@@ -29,10 +29,10 @@ def channel_shuffle(x, g):
 
 
     
-class ASSNET(nn.Module):
+class ALSS(nn.Module):
     #              为了保证程序可靠运行并不添加程序复杂度   请保证in_channels*  split_ratio 可以被left_conv_group整除
     def __init__(self, in_channels, out_channels, n=1, split_ratio=0.2, stride=1, conv_or_identity=0,conv_poolconv_pool=0,right_bottleneckratio=1): 
-        super(ASSNET, self).__init__()                                          
+        super(ALSS, self).__init__()                                          
         self.in_left=int(in_channels*split_ratio)
         self.in_right=in_channels-self.in_left
         self.in_right_mid = int(self.in_right*right_bottleneckratio)
@@ -107,9 +107,9 @@ class h_swish(nn.Module):
     def forward(self, x):
         return x * self.sigmoid(x)
     
-class CoordAttv2(nn.Module):
+class LCA(nn.Module):
     def __init__(self, input_channel, reduction=32):
-        super(CoordAttv2, self).__init__()
+        super(LCA, self).__init__()
         self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
         self.pool_w = nn.AdaptiveAvgPool2d((1, None))
  
@@ -144,7 +144,7 @@ class CoordAttv2(nn.Module):
 if __name__ == '__main__':
     torch.manual_seed(0)
     input_tensor = torch.rand(2, 32, 64, 64)  # 假设输入尺寸为 [batch_size, channels, height, width]
-    coord_att = CoordAttv2(input_channel=32)  # 创建 CoordAtt 实例，假设输入通道为32
+    coord_att = LCA(input_channel=32)  # 创建 CoordAtt 实例，假设输入通道为32
     output = coord_att(input_tensor)  # 获取输出
 
     print(f'Input shape: {input_tensor.shape}')

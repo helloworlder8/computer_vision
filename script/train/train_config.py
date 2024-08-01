@@ -31,5 +31,5 @@ task='segment'
 
 resume=False
 device='0'
-epochs=3
+epochs=1
 patience=200

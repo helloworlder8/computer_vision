@@ -962,8 +962,8 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
             SCDown,
             C2fCIB,
             
-            ASSNET,
-            CoordAttv2,
+            ALSS,
+            LCA,
         }:
             c1, c2 = ch[f], args[0] #输入 输出
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
@@ -976,7 +976,7 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
 
             args = [c1, c2, *args[1:]] # imp 总结 输入前一层 输出 第一个参数成宽度超参数 剩下的就是后面的参数
             if m in {BottleneckCSP, C1, C2, C2f, C2fAttn, C3, C3TR, C3Ghost, C3x, RepC3, C2fCIB,
-                     ASSNET}:
+                     ALSS}:
                 args.insert(2, n)  # number of repeats 输出 输出 多少个 后面的参数
                 n = 1
         elif m is AIFI:
