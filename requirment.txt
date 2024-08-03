@@ -1,0 +1,7 @@
+https://pypi.tuna.tsinghua.edu.cn/simple
+https://mirrors.aliyun.com/pypi/simple/
+
+
+pip install -U openmim
+服务器
+pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.1/index.html
