@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from ultralytics.engine.model import BaseProject
+from ultralytics.engine.project import BaseProject
 
 from .predict import FastSAMPredictor
 from .val import FastSAMValidator

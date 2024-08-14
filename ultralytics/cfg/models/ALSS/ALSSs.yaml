@@ -7,84 +7,48 @@
 nc: 80 # number of classes
 scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
   # [depth, width, max_channels]
+  # n: [1, 1, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   n: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
-  s: [0.33, 0.50, 1024] # YOLOv8s summary: 225 layers, 11166560 parameters, 11166544 gradients,  28.8 GFLOPs
-  m: [0.67, 0.75, 768] # YOLOv8m summary: 295 layers, 25902640 parameters, 25902624 gradients,  79.3 GFLOPs
+  s: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  m: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   l: [1.00, 1.00, 512] # YOLOv8l summary: 365 layers, 43691520 parameters, 43691504 gradients, 165.7 GFLOPs
   x: [1.00, 1.25, 512] # YOLOv8x summary: 365 layers, 68229648 parameters, 68229632 gradients, 258.5 GFLOPs
 
 # YOLOv8.0n backbone
 backbone:  
-#              为了保证程序可靠运行并不添加程序复杂度   请保证in_channels*  split_ratio 可以被left_conv_group整除
-# def __init__(self, in_channels, out_channels, n=1, split_ratio=0.2, stride=1, conv_or_identity=0,conv_poolconv_pool=0,right_bottleneckratio=1): 
-# def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):
-  - [-1, 1, Focus, [8, 6, 2,2]] #    8 160 160                          0
+# def __init__(self, C_in, C_out, num_blocks=1, alpha=0.2, beta=1, stride=1, use_identity=False, shortcut_mode=False):
+  - [-1, 1, Focus,[8, 6, 2,2]] #    8 160 160                          0
   - [-1, 1, Conv, [64, 3, 1]] #     64 160 160                         1
-  - [-1, 1, Conv, [128, 3, 1]] #    128 160 160                         2
-
-
-  - [-1, 1, ALSS, [128, 0.4, 2, -1, 0, 0.4]] #    128 80 80         3
-
-
-  - [-1, 1, ALSS, [256, 0.4, 1, 0, -1 , 0.4]] #    256 80 80        4 拼
-
-  - [-1, 1, ALSS, [512, 0.5, 2,-1, 1, 0.5]] #    512 40 40         5 
-  - [-1, 1, ALSS, [512, 0.6, 1, 0,-1, 0.6]] #    512 40 40    64   6 拼
-  - [-1, 1, ALSS, [1024,0.7, 2, -1,1, 0.6]] #    1024 20 20   7
-  - [-1, 1, SPPF, [1024, 5]]                  #    1024 20 20   8  拼
+  - [-1, 1, Conv, [128, 3, 1]] #    128 160 160                        2
+  - [-1, 1, ALSS, [128, 0.4, 0.4, 2, True, 2]] #    128 80 80          3 步长为2的情况再考虑shortcut_mode
+  - [-1, 1, ALSS, [256, 0.4, 0.4, 1, False,-1 ]] #    256 80 80        4 拼
+  - [-1, 1, ALSS, [512, 0.5, 0.5, 2, True, 2]] #    512 40 40          5 
+  - [-1, 1, ALSS, [512, 0.6, 0.6, 1, False,-1]] #    512 40 40    64   6 拼
+  - [-1, 1, ALSS, [1024,0.7, 0.6, 2, True, 2]] #    1024 20 20         7
+  - [-1, 1, SPPF, [1024, 5]]                  #    1024 20 20          8 拼
 
 # YOLOv8.0n head
 head:
-  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] #1024 40 40               9
-  - [[-1, 6], 1, Concat, [1]]                  #1536 40 40               10
-
-
-  - [-1, 1, ALSS, [512, 0.2, 1, 1, -1, 0.8]] #512 40 40     11拼接
-
-
-
-
-  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] #512 80 80                 12
-
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] #1024 40 40             9
+  - [[-1, 6], 1, Concat, [1]]                  #1536 40 40             10
+  - [-1, 1, ALSS, [512, 0.2, 0.8, 1, True, -1]] #512 40 40             11 拼
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] #512 80 80              12
   - [[-1, 4], 1, Concat, [1]] # cat backbone P3  768 80 80             13
+  - [-1, 1, LCA, [768]]       #                                        14
 
 
 
-
-
-# (self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True):
-
-# nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
-  - [-1, 1, LCA, [768]]   #14
-  - [-1, 1, ALSS, [320, 0.3, 1, 1, -1, 0.8]] #  320 80 80                     15 出
-
-
-  - [-1, 1, nn.MaxPool2d, [5, 2, 2]]  # 320 40 40                               16
-  - [-1, 1, Conv, [320, 1, 1,None,1,1,False]]  # 320 40 40                    17
-
-
-  - [[-1,11], 1, Concat, [1]]  # 832 40 40                                      18
-  
-
-
-  - [-1, 1, ALSS, [320, 0.2, 1, 1, -1, 0.8]] #  320 40 40                    19   出
+  - [-1, 1, ALSS, [320, 0.3, 0.8, 1, True, -1]] #  320 80 80           15 出
+  - [-1, 1, nn.MaxPool2d, [5, 2, 2]]  # 320 40 40                      16
+  - [-1, 1, Conv, [320, 1, 1,None,1,1,False]]  # 320 40 40             17
+  - [[-1,11], 1, Concat, [1]]  # 832 40 40                             18
+  - [-1, 1, ALSS, [320, 0.2, 0.8, 1, True, -1]] #  320 40 40           19 出
+  - [-1, 1, nn.MaxPool2d, [5, 2, 2]]            # 320 20 20            20
+  - [-1, 1, Conv, [320, 1, 1,None,1,1,False]]   # 320 20 20            21
+  - [[-1, 8], 1, Concat, [1]]                     #1344 20 20          22  
+  - [-1, 1, ALSS, [320, 0.2, 0.8, 1, True, -1]] #  128 20 20           23 出
 
 
 
-  - [-1, 1, nn.MaxPool2d, [5, 2, 2]]              # 320 20 20                             20
-  - [-1, 1, Conv, [320, 1, 1,None,1,1,False]]   # 320 20 20                                       21
-
-
-
-
-  - [[-1, 8], 1, Concat, [1]]                     #1344 20 20                                  22  
-
-
-
-  - [-1, 1, ALSS, [320, 0.2, 1, 1, -1, 0.8]] #  128 20 20                      23 出
-
-
-
-  - [[15, 19, 23], 1, Detect, [nc]]  # Detect(P3, P4, P5)                                     24
-
-# Model summary: 229 layers, 2239496 parameters, 2239480 gradients
+  - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)               24
+  # - [[15, 19, 23], 1, Segment, [nc, 32, 256]] # Detect(P3, P4, P5) 

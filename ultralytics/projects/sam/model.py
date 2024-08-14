@@ -16,7 +16,7 @@ Key Features:
 
 from pathlib import Path
 
-from ultralytics.engine.model import BaseProject
+from ultralytics.engine.project import BaseProject
 from ultralytics.utils.torch_utils import model_info
 
 from .build import build_sam

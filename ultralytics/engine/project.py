@@ -189,7 +189,7 @@ class BaseProject(nn.Module):
                 f"argument directly in your inference command, i.e. 'model.predict(source=..., device=0)'"
             )
 
-    def reset_weights(self) -> "Model":
+    def reset_weights(self) -> "BaseProject":
         """
         Resets the model parameters to randomly initialized values, effectively discarding all training information.
 

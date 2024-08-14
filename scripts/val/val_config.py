@@ -8,7 +8,7 @@ current_directory = current_file_path.parent
 data = str(current_directory / Path('../../../datasets/ISOD/ISOD.yaml'))
 
 
-model_yaml1='results/ISOD数据集训练实验/ALSSn-ISOD/weights/best.pt'
+model_yaml1='Recycle_Bin/ALSSn-BIRDSAI/weights/best.pt'
 model_yaml2='results/ISOD数据集训练实验/ALSSs-ISOD/weights/best.pt'
 model_yaml3='results/ISOD数据集训练实验/ALSSm-ISOD/weights/best.pt'
 model_yaml4='runs/contrast_experiment/yolov8-p2-0.900/weights/best.pt'

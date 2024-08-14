@@ -1,0 +1,12 @@
+
+ch: 1
+train: [TrainReal/images, Train2/images]  # train images (relative to 'path') 128 images   
+val: TestReal/images  # val images (relative to 'path') 128 images
+test: TestReal/images  # test images (optional)
+nc: 4
+# Classes
+names:
+  0: human
+  1: elephant
+  2: giraffe
+  3: unknown
