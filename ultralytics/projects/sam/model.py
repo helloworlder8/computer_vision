@@ -20,39 +20,67 @@ from ultralytics.engine.model import BaseProject
 from ultralytics.utils.torch_utils import model_info
 
 from .build import build_sam
-from .predict import Predictor
+from .predict import Predictor, SAM2Predictor
+
 
 
 class SAM(BaseProject):
     """
-    SAM (Segment Anything Model) interface class.
+    SAM (Segment Anything Model) interface class for real-time image segmentation tasks.
 
-    SAM is designed for promptable real-time image segmentation. It can be used with a variety of prompts such as
-    bounding boxes, points, or labels. The model has capabilities for zero-shot performance and is trained on the SA-1B
-    dataset.
+    This class provides an interface to the Segment Anything Model (SAM) from Ultralytics, designed for
+    promptable segmentation with versatility in image analysis. It supports various prompts such as bounding
+    boxes, points, or labels, and features zero-shot performance capabilities.
+
+    Attributes:
+        model (torch.nn.Module): The loaded SAM model.
+        is_sam2 (bool): Indicates whether the model is SAM2 variant.
+        task (str): The task type, set to "segment" for SAM models.
+
+    Methods:
+        predict: Performs segmentation prediction on the given image or video source.
+        info: Logs information about the SAM model.
+
+    Examples:
+        >>> sam = SAM('sam_b.pt')
+        >>> results = sam.predict('image.jpg', points=[[500, 375]])
+        >>> for r in results:
+        >>>     print(f"Detected {len(r.masks)} masks")
     """
 
     def __init__(self, model_name="sam_b.pt") -> None:
         """
-        Initializes the SAM model with a pre-trained model file.
+        Initializes the SAM (Segment Anything Model) instance.
 
         Args:
             model (str): Path to the pre-trained SAM model file. File should have a .pt or .pth extension.
 
         Raises:
             NotImplementedError: If the model file extension is not .pt or .pth.
+
+        Examples:
+            >>> sam = SAM('sam_b.pt')
+            >>> print(sam.is_sam2)
         """
         if model_name and Path(model_name).suffix not in {".pt", ".pth"}:
             raise NotImplementedError("SAM prediction requires pre-trained *.pt or *.pth model.")
+        self.is_sam2 = "sam2" in Path(model_name).stem
         super().__init__(model_name=model_name, task="segment")
 
     def _load(self, model_pt: str, task=None):
         """
         Loads the specified weights into the SAM model.
 
+        This method initializes the SAM model with the provided weights file, setting up the model architecture
+        and loading the pre-trained parameters.
+
         Args:
-            weights (str): Path to the weights file.
-            task (str, optional): Task name. Defaults to None.
+            weights (str): Path to the weights file. Should be a .pt or .pth file containing the model parameters.
+            task (str | None): Task name. If provided, it specifies the particular task the model is being loaded for.
+
+        Examples:
+            >>> sam = SAM('sam_b.pt')
+            >>> sam._load('path/to/custom_weights.pt')
         """
         self.model = build_sam(model_pt)
 
@@ -110,6 +138,13 @@ class SAM(BaseProject):
         Provides a mapping from the 'segment' task to its corresponding 'Predictor'.
 
         Returns:
-            (dict): A dictionary mapping the 'segment' task to its corresponding 'Predictor'.
+            (Dict[str, Type[Predictor]]): A dictionary mapping the 'segment' task to its corresponding Predictor
+                class. For SAM2 models, it maps to SAM2Predictor, otherwise to the standard Predictor.
+
+        Examples:
+            >>> sam = SAM('sam_b.pt')
+            >>> task_map = sam.task_map
+            >>> print(task_map)
+            {'segment': <class 'ultralytics.models.sam.predict.Predictor'>}
         """
-        return {"segment": {"predictor": Predictor}}
+        return {"segment": {"predictor": SAM2Predictor if self.is_sam2 else Predictor}}

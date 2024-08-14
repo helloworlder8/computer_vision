@@ -1,4 +1,10 @@
 # Byte-compiled / optimized / DLL files
+# 排除 Recycle Bin 文件夹
+Recycle Bin/
+
+# 排除 runs 文件夹
+runs/
+
 __pycache__/
 *.py[cod]
 *$py.class
