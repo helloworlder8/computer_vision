@@ -1,6 +1,6 @@
 # Byte-compiled / optimized / DLL files
 # 排除 Recycle Bin 文件夹
-Recycle Bin/
+Recycle_Bin/
 
 # 排除 runs 文件夹
 runs/
