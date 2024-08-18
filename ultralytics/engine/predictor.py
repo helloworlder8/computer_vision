@@ -261,7 +261,8 @@ class BasePredictor:
                     if ch == 1:
                         # 兼容单通道数据
                         new_img = new_img[:, :1, :, :]
-                    del kwargs['ch'] 
+                    if 'ch' in kwargs:
+                        del kwargs['ch']
                     preds = self.inference(new_img, *args, **kwargs)
                     if self.args.embed:
                         yield from [preds] if isinstance(preds, torch.Tensor) else preds  # yield embedding tensors

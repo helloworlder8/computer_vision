@@ -119,9 +119,9 @@ def test_triton():
 @pytest.mark.skipif(not check_requirements("pycocotools", install=False), reason="pycocotools not installed")
 def test_pycocotools():
     """Validate YOLO model predictions on COCO dataset using pycocotools."""
-    from ultralytics.projects.yolo.detect import DetectionValidator
-    from ultralytics.projects.yolo.pose import PoseValidator
-    from ultralytics.projects.yolo.segment import SegmentationValidator
+    from ultralytics.models.yolo.detect import DetectionValidator
+    from ultralytics.models.yolo.pose import PoseValidator
+    from ultralytics.models.yolo.segment import SegmentationValidator
 
     # Download annotations after each dataset downloads first
     url = "https://github.com/ultralytics/assets/releases/download/v8.2.0/"

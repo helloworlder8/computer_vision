@@ -68,8 +68,8 @@ def test_fastsam(task="segment", model=WEIGHTS_DIR / "FastSAM-s.pt", data="coco8
     run(f"yolo segment predict model={model} source={source} imgsz=32 save save_crop save_txt")
 
     from ultralytics import FastSAM
-    from ultralytics.projects.fastsam import FastSAMPrompt
-    from ultralytics.projects.sam import Predictor
+    from ultralytics.models.fastsam import FastSAMPrompt
+    from ultralytics.models.sam import Predictor
 
     # Create a FastSAM model
     sam_model = FastSAM(model)  # or FastSAM-x.pt

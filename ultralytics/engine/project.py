@@ -10,7 +10,7 @@ import torch
 from ultralytics.cfg import TASK2DATA, get_cfg, get_save_dir
 from ultralytics.engine.results import Results
 from ultralytics.hub import HUB_WEB_ROOT, HUBTrainingSession
-from ultralytics.nn.tasks import load_pytorch_model_attribute_assignment, guess_model_task, nn, create_model_dict
+from ultralytics.nn.tasks import torch_load_download_attribute_assignment, guess_model_task, nn, create_model_dict
 from ultralytics.utils import (
     ARGV,
     ASSETS,
@@ -164,7 +164,7 @@ class BaseProject(nn.Module):
         # model_pt = checks.check_model_file_from_stem(model_pt)  # add suffix, i.e. yolov8n -> yolov8n.pt
 
         if Path(model_pt).suffix == ".pt":
-            self.ckpt, self.model = load_pytorch_model_attribute_assignment(model_pt)
+            self.ckpt, self.model = torch_load_download_attribute_assignment(model_pt)
             self.model_name = self.model.model_name
             self.task = self.model.args["task"]
             self.overrides = self.model.args = self._reset_ckpt_args(self.model.args) #任务 数据配置 图像尺寸 单一类
@@ -229,7 +229,7 @@ class BaseProject(nn.Module):
         """
         self._check_is_pytorch_model()
         if isinstance(weights, (str, Path)):
-            self.ckpt, weights = load_pytorch_model_attribute_assignment(weights)
+            self.ckpt, weights = torch_load_download_attribute_assignment(weights)
         self.model.load(weights)
         return self
 
@@ -364,7 +364,7 @@ class BaseProject(nn.Module):
         #     x in ARGV for x in ("predict", "track", "mode=predict", "mode=track")
         # )
         # 有什么数据，做什么任务，有什么模型，输入图像尺寸，是不是一个类
-        custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # method defaults 置 批 保 模式
+        custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # 人任务模型数据，图单
         args = {**self.overrides, **custom, **kwargs}  # highest priority args on the right
         prompts = args.pop("prompts", None)  # for SAM-type models
 
@@ -455,6 +455,11 @@ class BaseProject(nn.Module):
         validator = (validator or self._task_map("validator"))(args=args, _callbacks=self.callbacks)
         validator(model=self.model)
         self.metrics = validator.metrics
+        metrics_file = validator.metrics.save_dir/'metrics.txt'
+        with metrics_file.open('w') as f:
+            for key, value in validator.metrics.results_dict.items():
+                f.write(f'{key}: {value}\n')
+        
         return validator.metrics
 
     def benchmark(
@@ -585,7 +590,7 @@ class BaseProject(nn.Module):
         """Update the model and configuration after training."""
         if RANK in {-1, 0}:
             ckpt = self.trainer.best if self.trainer.best.exists() else self.trainer.last
-            _, self.model = load_pytorch_model_attribute_assignment(ckpt)
+            _, self.model = torch_load_download_attribute_assignment(ckpt)
             self.overrides = self.model.args
             self.metrics = getattr(self.trainer.validator, "metrics", None)
 

@@ -563,7 +563,7 @@ def test_yolo_world():
     )
 
     # test WorWorldTrainerFromScratch
-    from ultralytics.projects.yolo.world.train_world import WorldTrainerFromScratch
+    from ultralytics.models.yolo.world.train_world import WorldTrainerFromScratch
 
     model = YOLO("yolov8s-worldv2.yaml")  # no YOLOv8n-world model yet
     model.train(

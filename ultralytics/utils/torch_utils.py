@@ -516,7 +516,7 @@ def strip_optimizer(f: Union[str, Path] = "best.pt", s: str = "") -> None:
         ```
 
     Note:
-        Use `ultralytics.nn.torch_safe_load` for missing modules with `x = torch_safe_load(f)[0]`
+        Use `ultralytics.nn.torch_load_download_model` for missing modules with `x = torch_load_download_model(f)[0]`
     """
     try:
         ckpt = torch.load(f, map_location=torch.device("cpu"))

@@ -377,12 +377,12 @@ def make_anchors(feats, strides, grid_cell_offset=0.5): #[torch.Size([2, 144, 80
 
 def dist2bbox(distance, anc_points, xywh=True, dim=-1): #预测的是每一个点的偏移量
     """Transform distance(ltrb) to box(xywh or xyxy)."""
-    lt, rb = distance.chunk(2, dim)
+    lt, rb = distance.chunk(2, dim) #torch.Size([1, 2, 8400]) torch.Size([1, 2, 8400])
     x1y1 = anc_points - lt
     x2y2 = anc_points + rb
     if xywh:
-        c_xy = (x1y1 + x2y2) / 2
-        wh = x2y2 - x1y1
+        c_xy = (x1y1 + x2y2) / 2 #中心点
+        wh = x2y2 - x1y1         #宽高
         return torch.cat((c_xy, wh), dim)  # xywh bbox
     return torch.cat((x1y1, x2y2), dim)  # xyxy bbox
 

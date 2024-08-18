@@ -105,7 +105,7 @@ def test_utils_benchmarks():
 def test_predict_sam():
     """Test SAM model predictions using different prompts, including bounding boxes and point annotations."""
     from ultralytics import SAM
-    from ultralytics.projects.sam import Predictor as SAMPredictor
+    from ultralytics.models.sam import Predictor as SAMPredictor
 
     # Load a model
     model = SAM(WEIGHTS_DIR / "sam_b.pt")

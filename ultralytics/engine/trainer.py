@@ -23,7 +23,7 @@ from torch import nn, optim
 
 from ultralytics.cfg import get_cfg, get_save_dir
 from ultralytics.data.utils import check_cls_dataset, check_det_dataset
-from ultralytics.nn.tasks import load_pytorch_model_attribute_assignment, attempt_load_weights
+from ultralytics.nn.tasks import torch_load_download_attribute_assignment, attempt_load_weights
 from ultralytics.utils import (
     DEFAULT_CFG,
     LOGGER,
@@ -623,14 +623,14 @@ class BaseTrainer:
         cfg, weights = self.model_name, None #这个是yaml文件情况
         ckpt = None
         if str(self.model_name).endswith(".pt"):
-            ckpt, weights = load_pytorch_model_attribute_assignment(self.model_name)
+            ckpt, weights = torch_load_download_attribute_assignment(self.model_name)
             if hasattr(weights, 'yaml'):
                 cfg = weights.model_dict = weights.yaml
             else:
                 cfg = weights.model_dict #有预训练权重的情况
 
         elif isinstance(self.args.pretrained, (str, Path)):
-            _, weights = load_pytorch_model_attribute_assignment(self.args.pretrained)
+            _, weights = torch_load_download_attribute_assignment(self.args.pretrained)
         self.model = self.get_model(cfg=cfg, weights=weights, verbose=RANK == -1)  # calls Model(cfg, weights)
         return ckpt
 

@@ -224,38 +224,8 @@ def cfg2dict(cfg):
 
 
 def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, overrides: Dict = None):
-    """
-    Load and merge configuration data from a file or dictionary, with optional overrides.
 
-    Args:
-        cfg (str | Path | dict | SimpleNamespace, optional): Configuration data source. Defaults to `DEFAULT_CFG_DICT`.
-        overrides (dict | None, optional): Dictionary containing key-value pairs to override the base configuration.
-            Defaults to None.
 
-    Returns:
-        (SimpleNamespace): Namespace containing the merged training arguments.
-
-    Notes:
-        - If both `cfg` and `overrides` are provided, the values in `overrides` will take precedence.
-        - Special handling ensures alignment and correctness of the configuration, such as converting numeric `project`
-          and `name` to strings and validating the configuration keys and values.
-
-    Example:
-        ```python
-        from ultralytics.cfg import get_cfg
-
-        # Load default configuration
-        config = get_cfg()
-
-        # Load from a custom file with overrides
-        config = get_cfg('path/to/config.yaml', overrides={'epochs': 50, 'batch_size': 16})
-        ```
-
-        Configuration dictionary merged with overrides:
-        ```python
-        {'epochs': 50, 'batch_size': 16, ...}
-        ```
-    """
     cfg = cfg2dict(cfg) #迭代器转为字典形式
 
     # Merge overrides
@@ -266,13 +236,7 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
         check_dict_alignment(cfg, overrides)
         cfg = {**cfg, **overrides}  # merge cfg and overrides dicts (prefer overrides)
 
-    # Special handling for numeric project/name
-    for k in "project", "name":
-        if k in cfg and isinstance(cfg[k], (int, float)):
-            cfg[k] = str(cfg[k]) #"project", "name"改成str
-    if cfg.get("name") == "model":  # assign model to 'name' arg
-        cfg["name"] = cfg.get("model", "").split(".")[0]
-        LOGGER.warning(f"WARNING ⚠️ 'name=model' automatically updated to 'name={cfg['name']}'.")
+
 
     # Type and Value checks
     check_cfg(cfg)
@@ -283,6 +247,14 @@ def get_cfg(cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, ove
 
 def check_cfg(cfg, hard=True):
     """Validate Ultralytics configuration argument types and values, converting them if necessary."""
+    # Special handling for numeric project/name
+    for k in "project", "name":
+        if k in cfg and isinstance(cfg[k], (int, float)):
+            cfg[k] = str(cfg[k]) #"project", "name"改成str
+    if cfg.get("name") == "model":  # assign model to 'name' arg
+        cfg["name"] = cfg.get("model", "").split(".")[0]
+        LOGGER.warning(f"WARNING ⚠️ 'name=model' automatically updated to 'name={cfg['name']}'.")
+        
     for k, v in cfg.items():
         if v is not None:  # None values may be from optional args
             if k in CFG_FLOAT_KEYS and not isinstance(v, (int, float)):

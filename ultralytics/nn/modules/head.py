@@ -55,7 +55,7 @@ class Detect(nn.Module):
 
         for i in range(self.nl):
             x[i] = torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1) #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
-        if self.training:  # Training path
+        if self.training:  # Training path  144 的话包含80分类和64目标检测
             return x
         y = self._inference(x)
         return y if self.export else (y, x)
@@ -88,7 +88,7 @@ class Detect(nn.Module):
         """Decode predicted bounding boxes and class probabilities based on multiple-level feature maps."""
         # Inference path
         shape = x[0].shape  # BCHW
-        x_cat = torch.cat([xi.view(shape[0], self.no, -1) for xi in x], 2)
+        x_cat = torch.cat([xi.view(shape[0], self.no, -1) for xi in x], 2) #torch.Size([1, 68, 8400]) 三个维度信息拼接
         if self.dynamic or self.shape != shape:
             self.anchors, self.strides = (x.transpose(0, 1) for x in make_anchors(x, self.stride, 0.5))
             self.shape = shape
@@ -108,8 +108,8 @@ class Detect(nn.Module):
             norm = self.strides / (self.stride[0] * grid_size)
             dbox = self.decode_bboxes(self.dfl(box) * norm, self.anchors.unsqueeze(0) * norm[:, :2])
         else:
-            dbox = self.decode_bboxes(self.dfl(box), self.anchors.unsqueeze(0)) * self.strides
-
+            dbox = self.decode_bboxes(self.dfl(box), self.anchors.unsqueeze(0)) * self.strides #torch.Size([1, 4, 8400])
+            # torch.Size([1, 4, 8400]) torch.Size([1, 2, 8400])
         return torch.cat((dbox, cls.sigmoid()), 1)
 
     def bias_init(self):
@@ -186,7 +186,7 @@ class Segment(Detect):
         if self.training:
             return x, mc, p #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
         return (torch.cat([x, mc], 1), p) if self.export else (torch.cat([x[0], mc], 1), (x[1], mc, p))
-
+        # 框 类别置信度 32维度    点                                                1 32 21504     1 32 256 256
 
 class OBB(Detect):
     """YOLOv8 OBB detection head for detection with rotation models."""
@@ -424,7 +424,7 @@ class RTDETRDecoder(nn.Module):
 
     def forward(self, x, batch=None):
         """Runs the forward pass of the module, returning bounding box and classification scores for the input."""
-        from ultralytics.projects.utils.ops import get_cdn_group
+        from ultralytics.models.utils.ops import get_cdn_group
 
         # Input projection and embedding
         feats, shapes = self._get_encoder_input(x)

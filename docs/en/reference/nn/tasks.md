@@ -51,7 +51,7 @@ keywords: Ultralytics, YOLO, nn tasks, DetectionModel, PoseModel, RTDETRDetectio
 
 <br><br>
 
-## ::: ultralytics.nn.tasks.torch_safe_load
+## ::: ultralytics.nn.tasks.torch_load_download_model
 
 <br><br>
 
@@ -59,7 +59,7 @@ keywords: Ultralytics, YOLO, nn tasks, DetectionModel, PoseModel, RTDETRDetectio
 
 <br><br>
 
-## ::: ultralytics.nn.tasks.load_pytorch_model_attribute_assignment
+## ::: ultralytics.nn.tasks.torch_load_download_attribute_assignment
 
 <br><br>
 

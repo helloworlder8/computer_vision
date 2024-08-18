@@ -31,8 +31,8 @@ def process_all_models(directory,ch):
 
 
 if __name__ == '__main__':
-    model_directory = "ultralytics/cfg/models/v8/yolov8.yaml"
-    ch = 3
+    model_directory = "runs/detect/ALSSn-BIRDSAI/ALSSn.yaml"
+    ch = 1
     # 检查model_directory是文件还是文件夹
     if os.path.isfile(model_directory):
         process_model(model_directory,ch)
@@ -40,3 +40,6 @@ if __name__ == '__main__':
         process_all_models(model_directory,ch)
     else:
         print(f"Error: {model_directory} is neither a file nor a directory.")
+        
+# Model summary (fused): 173 layers, 2,763,087 parameters, 2,763,071 gradients''
+# Model summary (fused): 173 layers, 2,740,479 parameters, 2,740,463 gradients

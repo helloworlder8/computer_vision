@@ -15,26 +15,26 @@ if __name__ == '__main__':
               name=name1,
               )
 
-    model2 = YOLO(model_yaml2)
-    model2.val(data=data,
-              split='val',
-              imgsz=640,
-              batch=16,
-              # rect=False,
-              # save_json=True, # if you need to cal coco metrice
-              device=device,
-              project='',
-              name=name2,
-              )
+    # model2 = YOLO(model_yaml2)
+    # model2.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=16,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project='',
+    #           name=name2,
+    #           )
     
-    model3 = YOLO(model_yaml3)
-    model3.val(data=data,
-              split='val',
-              imgsz=640,
-              batch=16,
-              # rect=False,
-              # save_json=True, # if you need to cal coco metrice
-              device=device,
-              project='',
-              name=name3,
-              )
+    # model3 = YOLO(model_yaml3)
+    # model3.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=16,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project='',
+    #           name=name3,
+    #           )

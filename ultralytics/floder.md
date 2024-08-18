@@ -1,1 +1,1 @@
-models-> projects
+models-> projects 妥协了FastSAM要求的必须要用models才能加载模型

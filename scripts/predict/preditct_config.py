@@ -15,7 +15,7 @@ model_yaml5='plot/ass-focus-poolconv-atta-iou-0.891_best.pt'
 model_yaml6='plot/yolov8-width_best.pt'
 
 
-name1='ALSSn-CA-BIRDSAIDdatasetSIoU'
+name1='ALSSn-BIRDSAI'
 name2='ass-focus-0.887'
 name3='ass-focus-poolconv-0.886'
 name4='ass-focus-poolconv-atta-iou-0.885'
@@ -24,8 +24,8 @@ name6='yolov8-width'
 # 批 模 名
 device='2'
 
-source = 'Recycle_Bin/0000000353_0000000000_0000000652.jpg'
+source = 'Recycle_Bin'
 
-batch = 16
+batch = 2
 
 show_labels = True

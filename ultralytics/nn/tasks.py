@@ -122,7 +122,7 @@ class BaseModel(nn.Module):
         """
         if augment:
             return self._predict_augment(x)
-        return self._predict_once(x, profile, visualize, embed)
+        return self._predict_once(x, profile, visualize, embed) #self._predict_once前向传播
 
     def _predict_once(self, x, profile=False, visualize=False, embed=None): #torch.Size([2, 3, 640, 640])
         """
@@ -525,7 +525,7 @@ class RTDETRDetectionModel(DetectionModel):
 
     def init_criterion(self):
         """Initialize the loss criterion for the RTDETRDetectionModel."""
-        from ultralytics.projects.utils.loss import RTDETRDetectionLoss
+        from ultralytics.models.utils.loss import RTDETRDetectionLoss
 
         return RTDETRDetectionLoss(nc=self.nc, use_vfl=True)
 
@@ -768,7 +768,7 @@ def temporary_modules(modules=None, attributes=None):
                 del sys.modules[old]
 
 
-def torch_safe_load(model_pt):
+def torch_load_download_model(model_pt):
     """
     This function attempts to load a PyTorch model with the torch.load() function. If a ModuleNotFoundError is raised,
     it catches the error, logs a warning message, and attempts to install the missing module via the
@@ -829,18 +829,18 @@ def torch_safe_load(model_pt):
     return ckpt, model_pt  # load
 
 
-def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
+def attempt_load_weights(model_pts, device=None, inplace=True, fuse=False):
     """Loads an ensemble of models weights=[a,b,c] or a single model weights=[a] or weights=a."""
 
     ensemble = Ensemble()
-    for w in weights if isinstance(weights, list) else [weights]:
-        ckpt, w = torch_safe_load(w)  # load ckpt
-        args = {**DEFAULT_CFG_DICT, **ckpt["train_args"]} if "train_args" in ckpt else None  # combined args
+    for model_pt in model_pts if isinstance(model_pts, list) else [model_pts]:
+        ckpt, model_pt = torch_load_download_model(model_pt)  # load ckpt
+        train_args = {**DEFAULT_CFG_DICT, **ckpt["train_args"]} if "train_args" in ckpt else None  # combined args
         model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
 
         # Model compatibility updates
-        model.args = args  # 只要训练参数
-        model.model_name = w  # attach *.pt file path to model
+        model.args = train_args  # 只要训练参数
+        model.model_name = model_pt  # attach *.pt file path to model
         model.task = guess_model_task(model)
         if not hasattr(model, "stride"):
             model.stride = torch.tensor([32.0])
@@ -860,7 +860,7 @@ def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
         return ensemble[-1]
 
     # Return ensemble
-    LOGGER.info(f"Ensemble created with {weights}\n")
+    LOGGER.info(f"Ensemble created with {model_pts}\n")
     for k in "names", "nc", "yaml":
         setattr(ensemble, k, getattr(ensemble[0], k))
     ensemble.stride = ensemble[int(torch.argmax(torch.tensor([m.stride.max() for m in ensemble])))].stride
@@ -868,16 +868,16 @@ def attempt_load_weights(weights, device=None, inplace=True, fuse=False):
     return ensemble
 
 
-def load_pytorch_model_attribute_assignment(model_pt, device=None, inplace=True, fuse=False):
+def torch_load_download_attribute_assignment(model_pt, device=None, inplace=True, fuse=False):
     """Loads a single model weights."""
-    ckpt, model_pt = torch_safe_load(model_pt)  # load ckpt
+    ckpt, model_pt = torch_load_download_model(model_pt)  # load ckpt  下载模型
    
     model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
     args = {**DEFAULT_CFG_DICT, **(ckpt.get("train_args", {}))}  # 参数中有一大块是训练参数
     # Model compatibility updates
     model.args = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}  # attach args to model
     model.model_name = model_pt  # attach *.pt file path to model
-    model.task = guess_model_task(model)
+    model.task  = guess_model_task(model)
     if not hasattr(model, "stride"):
         model.stride = torch.tensor([32.0])
 
@@ -965,16 +965,20 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
             c1, c2 = ch[f], args[0] #输入 输出
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
                 c2 = make_divisible(min(c2, max_channels) * width, 8) #成宽超参数
-            if m is C2fAttn:
-                args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
-                args[2] = int(
-                    max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2]
-                )  # num heads
+                
+                
+            # if m is C2fAttn:
+            #     args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
+            #     args[2] = int(
+            #         max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2]
+            #     )  # num heads
 
             args = [c1, c2, *args[1:]] # imp 总结 输入前一层 输出 第一个参数成宽度超参数 剩下的就是后面的参数
+            
+            
             if m in {BottleneckCSP, C1, C2, C2f, C2fAttn, C3, C3TR, C3Ghost, C3x, RepC3, C2fCIB,
                      ALSS}:
-                args.insert(2, n)  # number of repeats 输出 输出 多少个 后面的参数
+                args.insert(2, n)  # number of repeats
                 n = 1
         elif m is AIFI:
             args = [ch[f], *args]
