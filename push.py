@@ -86,7 +86,7 @@ if __name__ == '__main__':
 # git remote add origin https://github.com/helloworlder8/computer_vision.git
 # git branch
 # git add -A
-# git commit -m "24-08-14"
+# git commit -m "24-08-22-ALSS-weight"
 # git push -u origin 24-08-18
 # git config --global --unset http.proxy
 # git config --global --unset https.proxy
