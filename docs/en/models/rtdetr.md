@@ -146,7 +146,7 @@ Baidu's RT-DETR stands out due to its efficient hybrid encoder and IoU-aware que
 
 ### How does RT-DETR support adaptable inference speed for different real-time applications?
 
-Baidu's RT-DETR allows flexible adjustments of inference speed by using different decoder layers without requiring retraining. This adaptability is crucial for scaling performance across various real-time object detection tasks. Whether you need faster processing for lower precision needs or slower, more accurate detections, RT-DETR can be tailored to meet your specific requirements.
+Baidu's RT-DETR allows flexible adjustments of inference speed by using different decoder layers without requiring retraining. This adaptability is crucial for scaling performance across various real-time object detection tasks. Whether you need faster processing for lower precision needs or slower, more accurate predn, RT-DETR can be tailored to meet your specific requirements.
 
 ### Can I use RT-DETR models with other Ultralytics modes, such as training, validation, and export?
 

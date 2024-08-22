@@ -335,7 +335,7 @@ if __name__ == "__main__":
     img = cv2.imread(args.source)
 
     # Inference
-    boxes, segments, _ = model(img, conf_threshold=args.conf, iou_threshold=args.iou)
+    boxes, segments, _ = model(img, conf_threshold=args.conf, iou_threshold=args.NMS_IoU)
 
     # Draw bboxes and polygons
     if len(boxes) > 0:

@@ -81,13 +81,13 @@ def seed_worker(worker_id):  # noqa
     random.seed(worker_seed)
 
 
-def build_yolo_dataset(args, img_path, data_dict, batch, mode="train", rect=False, stride=32, multi_modal=False):
+def build_yolo_dataset(args, img_path, data_dict, batch_size, mode="train", rect=False, stride=32, multi_modal=False):
     """Build YOLO Dataset."""
     dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
     return dataset(
         img_path=img_path,
         data_dict=data_dict,
-        batch_size=batch,
+        batch_size=batch_size,
         augment=mode == "train",  # augmentation
         rect=args.rect or rect,  # rectangular batches
         stride=int(stride),

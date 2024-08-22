@@ -20,7 +20,7 @@ if __name__ == '__main__':
                 # amp=False # close amp
                 # fraction=0.2,
                 task=task,
-                project='',
+                project=project,
                 name=name1,
                 device= device,
                 epochs=epochs,

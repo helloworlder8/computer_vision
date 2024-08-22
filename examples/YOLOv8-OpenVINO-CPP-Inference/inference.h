@@ -29,7 +29,7 @@ class Inference {
 	void Preprocessing(const cv::Mat &frame);
 	void PostProcessing(cv::Mat &frame);
 	cv::Rect GetBoundingBox(const cv::Rect &src) const;
-	void DrawDetectedObject(cv::Mat &frame, const Detection &detections) const;
+	void DrawDetectedObject(cv::Mat &frame, const Detection &predn) const;
 
 	cv::Point2f scale_factor_;			// Scaling factor for the input frame
 	cv::Size2f model_input_shape_;	// Input shape of the model
@@ -38,7 +38,7 @@ class Inference {
 	ov::InferRequest inference_request_;  // OpenVINO inference request
 	ov::CompiledModel compiled_model_;    // OpenVINO compiled model
 
-	float model_confidence_threshold_;  // Confidence threshold for detections
+	float model_confidence_threshold_;  // Confidence threshold for predn
 	float model_NMS_threshold_;         // Non-Maximum Suppression threshold
 
 	std::vector<std::string> classes_ {

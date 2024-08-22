@@ -91,7 +91,7 @@ iou = 0.45  # NMS IoU threshold
 agnostic = False  # NMS class-agnostic
 multi_label = False  # NMS multiple labels per box
 classes = None  # (optional list) filter by class, i.e. = [0, 15, 16] for COCO persons, cats and dogs
-max_det = 1000  # maximum number of detections per image
+max_det = 1000  # maximum number of predn per image
 amp = False  # Automatic Mixed Precision (AMP) inference
 
 results = model(img, size=320)  # custom inference size
@@ -227,7 +227,7 @@ Results can be returned and saved as detection crops:
 
 ```python
 results = model(img)  # inference
-crops = results.crop(save=True)  # cropped detections dictionary
+crops = results.crop(save=True)  # cropped predn dictionary
 ```
 
 ### Pandas Results
@@ -268,7 +268,7 @@ Results can be returned and saved as detection crops:
 
 ```python
 results = model(img)  # inference
-crops = results.crop(save=True)  # cropped detections dictionary
+crops = results.crop(save=True)  # cropped predn dictionary
 ```
 
 ### JSON Results

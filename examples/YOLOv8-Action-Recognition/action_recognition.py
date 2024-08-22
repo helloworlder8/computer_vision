@@ -282,7 +282,7 @@ def run(
         output_path (Optional[str], optional): Path to save the output video. Defaults to None.
         crop_margin_percentage (int, optional): Percentage of margin to add around detected objects. Defaults to 10.
         num_video_sequence_samples (int, optional): Number of video frames to use for classification. Defaults to 8.
-        skip_frame (int, optional): Number of frames to skip between detections. Defaults to 4.
+        skip_frame (int, optional): Number of frames to skip between predn. Defaults to 4.
         video_cls_overlap_ratio (float, optional): Overlap ratio between video sequences. Defaults to 0.25.
         fp16 (bool, optional): Whether to use half-precision floating point. Defaults to False.
         video_classifier_model (str, optional): Name or path of the video classifier model. Defaults to "microsoft/xclip-base-patch32".
@@ -433,7 +433,7 @@ def parse_opt():
     parser.add_argument(
         "--num-video-sequence-samples", type=int, default=8, help="number of video frames to use for classification"
     )
-    parser.add_argument("--skip-frame", type=int, default=2, help="number of frames to skip between detections")
+    parser.add_argument("--skip-frame", type=int, default=2, help="number of frames to skip between predn")
     parser.add_argument(
         "--video-cls-overlap-ratio", type=float, default=0.25, help="overlap ratio between video sequences"
     )

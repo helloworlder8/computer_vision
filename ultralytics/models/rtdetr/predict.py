@@ -35,7 +35,7 @@ class RTDETRPredictor(BasePredictor):
         """
         Postprocess the raw predictions from the model to generate bounding boxes and confidence scores.
 
-        The method filters detections based on confidence and class if specified in `self.args`.
+        The method filters predn based on confidence and class if specified in `self.args`.
 
         Args:
             preds (list): List of [predictions, extra] from the model.

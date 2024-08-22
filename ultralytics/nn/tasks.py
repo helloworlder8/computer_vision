@@ -875,8 +875,8 @@ def torch_load_download_attribute_assignment(model_pt, device=None, inplace=True
     model = (ckpt.get("ema") or ckpt["model"]).to(device).float()  # FP32 model
     args = {**DEFAULT_CFG_DICT, **(ckpt.get("train_args", {}))}  # 参数中有一大块是训练参数
     # Model compatibility updates
-    model.args = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}  # attach args to model
     model.model_name = model_pt  # attach *.pt file path to model
+    model.args = {k: v for k, v in args.items() if k in DEFAULT_CFG_KEYS}  # attach args to model
     model.task  = guess_model_task(model)
     if not hasattr(model, "stride"):
         model.stride = torch.tensor([32.0])

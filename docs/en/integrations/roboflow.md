@@ -228,7 +228,7 @@ Want to learn more about using Roboflow for creating YOLOv8 models? The followin
 
 - [Train YOLOv8 on a Custom Dataset](https://github.com/roboflow/notebooks/blob/main/notebooks/train-yolov8-object-detection-on-custom-dataset.ipynb): Follow our interactive notebook that shows you how to train a YOLOv8 model on a custom dataset.
 - [Autodistill](https://autodistill.github.io/autodistill/): Use large foundation vision models to label data for specific models. You can label images for use in training YOLOv8 classification, detection, and segmentation models with Autodistill.
-- [Supervision](https://roboflow.github.io/supervision/): A Python package with helpful utilities for use in working with computer vision models. You can use supervision to filter detections, compute confusion matrices, and more, all in a few lines of Python code.
+- [Supervision](https://roboflow.github.io/supervision/): A Python package with helpful utilities for use in working with computer vision models. You can use supervision to filter predn, compute confusion matrices, and more, all in a few lines of Python code.
 - [Roboflow Blog](https://blog.roboflow.com/): The Roboflow Blog features over 500 articles on computer vision, covering topics from how to train a YOLOv8 model to annotation best practices.
 - [Roboflow YouTube channel](https://www.youtube.com/@Roboflow): Browse dozens of in-depth computer vision guides on our YouTube channel, covering topics from training YOLOv8 models to automated image labeling.
 

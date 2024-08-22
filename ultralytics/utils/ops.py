@@ -161,35 +161,35 @@ def nms_rotated(boxes, scores, threshold=0.45):
         # p = ops.non_max_suppression(
         #     preds[0],
         #     self.args.conf,
-        #     self.args.iou,
+        #     self.args.NMS_IoU,
         #     labels=self.lb,
         #     multi_label=True,
         #     agnostic=self.args.single_cls,
         #     max_det=self.args.max_det,
-        #     num_classes=self.num_classes,
+        #     num_cls=self.num_cls,
         # )
 def non_max_suppression(
     preds,
     conf=0.25,
-    iou=0.45,
+    NMS_IoU=0.45,
     classes=None,
     agnostic=False,
     multi_label=False,
     labels=(),
     max_det=300,
-    num_classes=0,  # number of classes (optional)
+    num_cls=0,  # number of classes (optional)
     max_time_img=0.05,
     max_nms=30000,
     max_wh=7680,
     in_place=True,
     rotated=False,
 ):
-
+    # 验证集实验在非极大值抑制的时候 conf=0.001 iou=0.7
     import torchvision  # scope for faster 'import ultralytics'
-
+    # 预测有3528个值
     # Checks
     assert 0 <= conf <= 1, f"Invalid Confidence threshold {conf}, valid values are between 0.0 and 1.0"
-    assert 0 <= iou <= 1, f"Invalid IoU {iou}, valid values are between 0.0 and 1.0"
+    assert 0 <= NMS_IoU <= 1, f"Invalid IoU {NMS_IoU}, valid values are between 0.0 and 1.0"
     if isinstance(preds, (list, tuple)):  # YOLOv8 model in validation model, output = (inference_out, loss_out)
         preds = preds[0]  # select only inference output
     if classes is not None:
@@ -201,18 +201,18 @@ def non_max_suppression(
     #         output = [pred[(pred[:, 5:6] == classes).any(1)] for pred in output]
     #     return output
 
-    bs = preds.shape[0]  # batch size (BCN, i.e. 1,84,6300)
-    num_classes = num_classes or (preds.shape[1] - 4)  # number of classes
-    num_masks = preds.shape[1] - num_classes - 4  # number of masks
-    mask_index = 4 + num_classes  # mask start index
-    conf_TF = preds[:, 4:mask_index].amax(1) > conf  # candidates torch.Size([1, 4, 8400])->torch.Size([1, 8400])置信度
+    batch_size = preds.shape[0]  # batch size (BCN, i.e. 1,84,6300)
+    num_cls = num_cls or (preds.shape[1] - 4)  # number of classes
+    num_masks = preds.shape[1] - num_cls - 4  # number of masks
+    mask_index = 4 + num_cls  # mask start index
+    conf_TF = preds[:, 4:mask_index].amax(1) > conf  # candidates torch.Size([2, 84, 3528])->torch.Size([2, 3528])置信度
     # preds数据格式xyxy 各各类别置信度
     # Settings
     # min_wh = 2  # (pixels) minimum box width and height
-    time_limit = 2.0 + max_time_img * bs  # seconds to quit after
-    multi_label &= num_classes > 1  # multiple labels per box (adds 0.5ms/img)
+    time_limit = 2.0 + max_time_img * batch_size  # seconds to quit after
+    multi_label &= num_cls > 1  # multiple labels per box (adds 0.5ms/img)
 
-    preds = preds.transpose(-1, -2)  # shape(1,84,6300) to shape(1,6300,84)
+    preds = preds.transpose(-1, -2)  # torch.Size([2, 84, 3528]) to torch.Size([2, 3528, 84])
     if not rotated:
         if in_place:
             preds[..., :4] = xywh2xyxy(preds[..., :4])  # xywh to xyxy
@@ -220,55 +220,58 @@ def non_max_suppression(
             preds = torch.cat((xywh2xyxy(preds[..., :4]), preds[..., 4:]), dim=-1)  # xywh to xyxy
 
     t = time.time()
-    output = [torch.zeros((0, 6 + num_masks), device=preds.device)] * bs
-    for img_index, x in enumerate(preds):  # 批 点 框类
+    
+    
+    
+    NMS_out = [torch.zeros((0, 6 + num_masks), device=preds.device)] * batch_size
+    for img_index, pred in enumerate(preds):  # 取出一张图片的信息
         # Apply constraints
         # x[((x[:, 2:4] < min_wh) | (x[:, 2:4] > max_wh)).any(1), 4] = 0  # width-height
-        x = x[conf_TF[img_index]]  # imp 置信度过滤  torch.Size([8400,8])-> torch.Size([2, 8])
+        pred = pred[conf_TF[img_index]]  # imp 置信度过滤  torch.Size([3528,84])-> torch.Size([306, 84])
 
         # Cat apriori labels if autolabelling
         if labels and len(labels[img_index]) and not rotated:
             lb = labels[img_index]
-            v = torch.zeros((len(lb), num_classes + num_masks + 4), device=x.device)
+            v = torch.zeros((len(lb), num_cls + num_masks + 4), device=x.device)
             v[:, :4] = xywh2xyxy(lb[:, 1:5])  # box
             v[range(len(lb)), lb[:, 0].long() + 4] = 1.0  # cls
             x = torch.cat((x, v), 0)
 
         # If none remain process next image
-        if not x.shape[0]:
+        if not pred.shape[0]:
             continue
 
         # 数据格式 xyxy 各类别置信度 掩膜数目
-        box, cls, mask = x.split((4, num_classes, num_masks), 1) #torch.Size([2, 4])  torch.Size([2, 4])
+        pred_box, pd_cls, pred_mask = pred.split((4, num_cls, num_masks), 1) #torch.Size([306, 4]) torch.Size([306, 80]) torch.Size([306, 0])
                                                                  #2表示剩下两个框
         if multi_label:
-            i, j = torch.where(cls > conf)
-            x = torch.cat((box[i], x[i, 4 + j, None], j[:, None].float(), mask[i]), 1)
+            boxes_index, cls_index = torch.where(pd_cls > conf) #306x80个点中有407个点超过了默认置信度 框 类
+            pred = torch.cat((pred_box[boxes_index], pred[boxes_index, 4 + cls_index, None], cls_index[:, None].float(), pred_mask[boxes_index]), 1) #xyxy cls值  clas索引
         else:  # best class only
-            cls_conf, j = cls.max(1, keepdim=True) # torch.Size([2, 1]) 两个框 每个框的置信度   框的索引（哪个类别）
-            x = torch.cat((box, cls_conf, j.float(), mask), 1)[cls_conf.view(-1) > conf] #torch.Size([2, 6])
+            cls_conf, j = pd_cls.max(1, keepdim=True) # torch.Size([2, 1]) 两个框 每个框的置信度   框的索引（哪个类别）
+            pred = torch.cat((pred_box, cls_conf, j.float(), pred_mask), 1)[cls_conf.view(-1) > conf] #torch.Size([2, 6])
             # 主观上任务这个类置信度过滤完全没有必要
         # Filter by class
         if classes is not None:
             x = x[(x[:, 5:6] == classes).any(1)]
-
+        # 支持一个框多类别的化会上升
         # Check shape
-        n = x.shape[0]  # number of boxes
-        if not n:  # no boxes
+        num_boxes = pred.shape[0]  # number of boxes
+        if not num_boxes:  # no boxes
             continue
-        if n > max_nms:  # excess boxes
-            x = x[x[:, 4].argsort(descending=True)[:max_nms]]  # sort by confidence and remove excess boxes
+        if num_boxes > max_nms:  # excess boxes
+            pred = pred[pred[:, 4].argsort(descending=True)[:max_nms]]  # sort by confidence and remove excess boxes
 
         # Batched NMS
-        c = x[:, 5:6] * (0 if agnostic else max_wh)  # classes index
-        scores = x[:, 4]  # scores也就是类别置信度
+        cls_index = pred[:, 5:6] * (0 if agnostic else max_wh)  # classes index
+        cls_value = pred[:, 4]  #
         if rotated:
-            boxes = torch.cat((x[:, :2] + c, x[:, 2:4], x[:, -1:]), dim=-1)  # xywhr
-            i = nms_rotated(boxes, scores, iou)
+            boxes = torch.cat((pred[:, :2] + cls_index, pred[:, 2:4], pred[:, -1:]), dim=-1)  # xywhr
+            boxes_index = nms_rotated(boxes, cls_value, NMS_IoU)
         else:
-            boxes = x[:, :4] + c  # boxes (offset by class)
-            i = torchvision.ops.nms(boxes, scores, iou)  # NMS  iou过滤
-        i = i[:max_det]  # limit detections
+            boxes = pred[:, :4] + cls_index  # boxes (offset by class)
+            boxes_index = torchvision.ops.nms(boxes, cls_value, NMS_IoU)  # NMS  盒子  置信度 iou
+        boxes_index = boxes_index[:max_det]  # limit predn
 
         # # Experimental
         # merge = False  # use merge-NMS
@@ -278,16 +281,16 @@ def non_max_suppression(
         #     iou = box_iou(boxes[i], boxes) > iou  # IoU matrix
         #     weights = iou * scores[None]  # box weights
         #     x[i, :4] = torch.mm(weights, x[:, :4]).float() / weights.sum(1, keepdim=True)  # merged boxes
-        #     redundant = True  # require redundant detections
+        #     redundant = True  # require redundant predn
         #     if redundant:
         #         i = i[iou.sum(1) > 1]  # require redundancy
 
-        output[img_index] = x[i]  #i是index的意思
+        NMS_out[img_index] = pred[boxes_index]  #i是index的意思
         if (time.time() - t) > time_limit:
             LOGGER.warning(f"WARNING ⚠️ NMS time limit {time_limit:.3f}s exceeded")
             break  # time limit exceeded
 
-    return output
+    return NMS_out
 
 
 def clip_boxes(boxes, shape):

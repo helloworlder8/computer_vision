@@ -104,7 +104,7 @@ Ultralytics YOLOv8 uses various metrics during the validation process to assess 
 
 - **mAP (mean Average Precision)**: This evaluates the accuracy of object detection.
 - **IOU (Intersection over Union)**: Measures the overlap between predicted and ground truth bounding boxes.
-- **Precision and Recall**: Precision measures the ratio of true positive detections to the total detected positives, while recall measures the ratio of true positive detections to the total actual positives.
+- **Precision and Recall**: Precision measures the ratio of true positive predn to the total detected positives, while recall measures the ratio of true positive predn to the total actual positives.
 
 You can run the following command to start the validation:
 

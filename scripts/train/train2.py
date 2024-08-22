@@ -15,13 +15,13 @@ if __name__ == '__main__':
                 # close_mosaic=10,
                 # workers=4,
                 # optimizer='SGD', # using SGD
-                IoU="FineSIoU",
+                # IoU="FineSIoU",
                 val_interval=val_interval,
                 resume=resume, # last.pt path
                 # amp=False # close amp
                 # fraction=0.2,
                 task=task,
-                project='',
+                project=project,
                 name=name2,
                 device=device,
                 epochs=epochs,

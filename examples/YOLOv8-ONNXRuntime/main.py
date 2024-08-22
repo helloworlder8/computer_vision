@@ -21,7 +21,7 @@ class YOLOv8:
         Args:
             onnx_model: Path to the ONNX model.
             input_image: Path to the input image.
-            confidence_thres: Confidence threshold for filtering detections.
+            confidence_thres: Confidence threshold for filtering predn.
             iou_thres: IoU (Intersection over Union) threshold for non-maximum suppression.
         """
         self.onnx_model = onnx_model
@@ -40,7 +40,7 @@ class YOLOv8:
         Draws bounding boxes and labels on the input image based on the detected objects.
 
         Args:
-            img: The input image to draw detections on.
+            img: The input image to draw predn on.
             box: Detected bounding box.
             score: Corresponding detection score.
             class_id: Class ID for the detected object.
@@ -116,7 +116,7 @@ class YOLOv8:
             output (numpy.ndarray): The output of the model.
 
         Returns:
-            numpy.ndarray: The input image with detections drawn on it.
+            numpy.ndarray: The input image with predn drawn on it.
         """
 
         # Transpose and squeeze the output to match the expected shape
@@ -125,7 +125,7 @@ class YOLOv8:
         # Get the number of rows in the outputs array
         rows = outputs.shape[0]
 
-        # Lists to store the bounding boxes, scores, and class IDs of the detections
+        # Lists to store the bounding boxes, scores, and class IDs of the predn
         boxes = []
         scores = []
         class_ids = []
@@ -179,10 +179,10 @@ class YOLOv8:
 
     def main(self):
         """
-        Performs inference using an ONNX model and returns the output image with drawn detections.
+        Performs inference using an ONNX model and returns the output image with drawn predn.
 
         Returns:
-            output_img: The output image with drawn detections.
+            output_img: The output image with drawn predn.
         """
         # Create an inference session using the ONNX model and specify execution providers
         session = ort.InferenceSession(self.onnx_model, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     check_requirements("onnxruntime-gpu" if torch.cuda.is_available() else "onnxruntime")
 
     # Create an instance of the YOLOv8 class with the specified arguments
-    detection = YOLOv8(args.model, args.img, args.conf_thres, args.iou_thres)
+    detection = YOLOv8(args.model, args.img, args.conf_thres, args.NMS_IoU_thres)
 
     # Perform object detection and obtain the output image
     output_image = detection.main()

@@ -32,7 +32,7 @@ def get_weight_size(path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='results/ALSSn-CA-BIRDSAIDFineSIoU/weights/best.pt', help='trained weights path')
+    parser.add_argument('--weights', type=str, default='runs/detect/ALSSn-LCA_22-BIRDSAI-0.873/weights/best.pt', help='trained weights path')
     parser.add_argument('--batch', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--imgs', nargs='+', type=int, default=[640, 640], help='[height, width] image sizes')
     parser.add_argument('--device', default='3', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -83,3 +83,4 @@ if __name__ == '__main__':
     infer_time_per_image = np.sum(time_arr) / (opt.num_time * opt.batch) #总共进去了多少张照片
     
     print(f'model weights:{opt.weights} size:{get_weight_size(opt.weights)}M (bs:{opt.batch})Latency:{infer_time_per_image:.5f}s +- {std_time:.5f}s fps:{1 / infer_time_per_image:.1f}')
+    

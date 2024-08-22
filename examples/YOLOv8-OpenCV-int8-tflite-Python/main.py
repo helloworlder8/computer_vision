@@ -93,7 +93,7 @@ class Yolov8TFLite:
         Args:
             tflite_model: Path to the TFLite model.
             input_image: Path to the input image.
-            confidence_thres: Confidence threshold for filtering detections.
+            confidence_thres: Confidence threshold for filtering predn.
             iou_thres: IoU (Intersection over Union) threshold for non-maximum suppression.
         """
 
@@ -113,7 +113,7 @@ class Yolov8TFLite:
         Draws bounding boxes and labels on the input image based on the detected objects.
 
         Args:
-            img: The input image to draw detections on.
+            img: The input image to draw predn on.
             box: Detected bounding box.
             score: Corresponding detection score.
             class_id: Class ID for the detected object.
@@ -187,7 +187,7 @@ class Yolov8TFLite:
             output (numpy.ndarray): The output of the model.
 
         Returns:
-            numpy.ndarray: The input image with detections drawn on it.
+            numpy.ndarray: The input image with predn drawn on it.
         """
 
         boxes = []
@@ -229,10 +229,10 @@ class Yolov8TFLite:
 
     def main(self):
         """
-        Performs inference using a TFLite model and returns the output image with drawn detections.
+        Performs inference using a TFLite model and returns the output image with drawn predn.
 
         Returns:
-            output_img: The output image with drawn detections.
+            output_img: The output image with drawn predn.
         """
 
         # Create an interpreter for the TFLite model
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Create an instance of the Yolov8TFLite class with the specified arguments
-    detection = Yolov8TFLite(args.model, args.img, args.conf_thres, args.iou_thres)
+    detection = Yolov8TFLite(args.model, args.img, args.conf_thres, args.NMS_IoU_thres)
 
     # Perform object detection and obtain the output image
     output_image = detection.main()

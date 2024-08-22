@@ -93,23 +93,23 @@ def iou_distance(atracks: list, btracks: list) -> np.ndarray:
     return 1 - ious  # cost matrix
 
 
-def embedding_distance(tracks: list, detections: list, metric: str = "cosine") -> np.ndarray:
+def embedding_distance(tracks: list, predn: list, metric: str = "cosine") -> np.ndarray:
     """
-    Compute distance between tracks and detections based on embeddings.
+    Compute distance between tracks and predn based on embeddings.
 
     Args:
         tracks (list[STrack]): List of tracks.
-        detections (list[BaseTrack]): List of detections.
+        predn (list[BaseTrack]): List of predn.
         metric (str, optional): Metric for distance computation. Defaults to 'cosine'.
 
     Returns:
         (np.ndarray): Cost matrix computed based on embeddings.
     """
 
-    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float32)
+    cost_matrix = np.zeros((len(tracks), len(predn)), dtype=np.float32)
     if cost_matrix.size == 0:
         return cost_matrix
-    det_features = np.asarray([track.curr_feat for track in detections], dtype=np.float32)
+    det_features = np.asarray([track.curr_feat for track in predn], dtype=np.float32)
     # for i, track in enumerate(tracks):
     # cost_matrix[i, :] = np.maximum(0.0, cdist(track.smooth_feat.reshape(1,-1), det_features, metric))
     track_features = np.asarray([track.smooth_feat for track in tracks], dtype=np.float32)
@@ -117,13 +117,13 @@ def embedding_distance(tracks: list, detections: list, metric: str = "cosine") -
     return cost_matrix
 
 
-def fuse_score(cost_matrix: np.ndarray, detections: list) -> np.ndarray:
+def fuse_score(cost_matrix: np.ndarray, predn: list) -> np.ndarray:
     """
     Fuses cost matrix with detection scores to produce a single similarity matrix.
 
     Args:
         cost_matrix (np.ndarray): The matrix containing cost values for assignments.
-        detections (list[BaseTrack]): List of detections with scores.
+        predn (list[BaseTrack]): List of predn with scores.
 
     Returns:
         (np.ndarray): Fused similarity matrix.
@@ -132,7 +132,7 @@ def fuse_score(cost_matrix: np.ndarray, detections: list) -> np.ndarray:
     if cost_matrix.size == 0:
         return cost_matrix
     iou_sim = 1 - cost_matrix
-    det_scores = np.array([det.score for det in detections])
+    det_scores = np.array([det.score for det in predn])
     det_scores = np.expand_dims(det_scores, axis=0).repeat(cost_matrix.shape[0], axis=0)
     fuse_sim = iou_sim * det_scores
     return 1 - fuse_sim  # fuse_cost

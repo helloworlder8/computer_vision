@@ -49,7 +49,7 @@ class BaseValidator:
         model (nn.Module): Model to validate.
         data (dict): Data dictionary.
         device (torch.device): Device to use for validation.
-        batch_i (int): Current batch index.
+        batch_index (int): Current batch index.
         training (bool): Whether the model is in training mode.
         names (dict): Class names.
         seen: Records the number of images seen so far during validation.
@@ -65,7 +65,7 @@ class BaseValidator:
         callbacks (dict): Dictionary to store various callback functions.
     """
 
-    def __init__(self, dataloader=None, save_dir=None, pbar=None, args=None, _callbacks=None):
+    def __init__(self, args=None, dataloader=None, save_dir=None, pbar=None, _callbacks=None):
         """
         Initializes a BaseValidator instance.
 
@@ -82,11 +82,11 @@ class BaseValidator:
         self.stride = None
         self.data_dict = None
         self.device = None
-        self.batch_i = None
+        self.batch_index = None
         self.training = True
         self.names = None
         self.seen = None
-        self.stats = None
+        self.stats_dict = None
         self.confusion_matrix = None
         self.nc = None
         self.iouv = None
@@ -122,7 +122,7 @@ class BaseValidator:
         else:
             callbacks.add_integration_callbacks(self)
             model = AutoBackend(
-                weights=model or self.args.model_name,
+                models=model or self.args.model_name,
                 device=select_device(self.args.device, self.args.batch),
                 dnn=self.args.dnn,
                 data=self.args.data,
@@ -131,7 +131,7 @@ class BaseValidator:
             # self.model = model
             self.device = model.device  # update device
             self.args.half = model.fp16  # update half
-            stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine
+            stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine  #32 true
             imgsz = check_imgsz(self.args.imgsz, stride=stride)
             if engine:
                 self.args.batch = model.batch
@@ -167,9 +167,9 @@ class BaseValidator:
         bar = TQDM(self.dataloader, desc=self.get_desc(), total=len(self.dataloader))
         self.init_metrics(de_parallel(model))
         self.jdict = []  # empty before each val
-        for batch_i, batch in enumerate(bar):
+        for batch_index, batch in enumerate(bar):
             self.run_callbacks("on_val_batch_start")
-            self.batch_i = batch_i
+            self.batch_index = batch_index
             # Preprocess
             with dt[0]:
                 batch = self.preprocess(batch)
@@ -185,12 +185,12 @@ class BaseValidator:
 
             # Postprocess
             with dt[3]:
-                preds = self.postprocess(preds)
-
+                preds = self.postprocess(preds) #torch.Size([228, 6])torch.Size([19, 6])
+                # 置信非极大值抑制  默认非极大值抑制置信度为0.001  非极大值抑制iou为0.7
             self.update_metrics(preds, batch)
-            if self.args.plots and batch_i < 3:
-                self.plot_val_samples(batch, batch_i)
-                self.plot_predictions(batch, preds, batch_i)
+            if self.args.plots and batch_index < 3:
+                self.plot_val_samples(batch, batch_index)
+                self.plot_predictions(batch, preds, batch_index)
 
             self.run_callbacks("on_val_batch_end")
         stats = self.get_stats()
@@ -217,25 +217,25 @@ class BaseValidator:
                 LOGGER.info(f"Results saved to {colorstr('bold', self.save_dir)}")
             return stats
 
-    def match_predictions(self, pred_classes, true_classes, iou, use_scipy=False):
+    def create_pd_iouv_matrix(self, pd_cls, gt_cls, iou, use_scipy=False):
         """
-        Matches predictions to ground truth objects (pred_classes, true_classes) using IoU.
+        Matches predictions to ground truth objects (pd_cls, gt_cls) using IoU.
 
         Args:
-            pred_classes (torch.Tensor): Predicted class indices of shape(N,).
-            true_classes (torch.Tensor): Target class indices of shape(M,).
+            pd_cls (torch.Tensor): Predicted class indices of shape(N,).
+            gt_cls (torch.Tensor): Target class indices of shape(M,).
             iou (torch.Tensor): An NxM tensor containing the pairwise IoU values for predictions and ground of truth
             use_scipy (bool): Whether to use scipy for matching (more precise).
 
         Returns:
-            (torch.Tensor): Correct tensor of shape(N,10) for 10 IoU thresholds.
+            (torch.Tensor): pd_iouv_matrix tensor of shape(N,10) for 10 IoU thresholds.
         """
-        # Dx10 matrix, where D - detections, 10 - IoU thresholds
-        correct = np.zeros((pred_classes.shape[0], self.iouv.shape[0])).astype(bool)
-        # LxD matrix where L - labels (rows), D - detections (columns)
-        correct_class = true_classes[:, None] == pred_classes
-        iou = iou * correct_class  # zero out the wrong classes
-        iou = iou.cpu().numpy()
+        # Dx10 matrix, where D - predn, 10 - IoU thresholds
+        pd_iouv_matrix = np.zeros((pd_cls.shape[0], self.iouv.shape[0])).astype(bool) #(228, 10)
+        # LxD matrix where L - labels (rows), D - predn (columns)
+        TF = gt_cls[:, None] == pd_cls #torch.Size([17, 228])
+        iou = iou * TF  # 类别过滤
+        iou = iou.cpu().numpy() #(17, 228)
         for i, threshold in enumerate(self.iouv.cpu().tolist()):
             if use_scipy:
                 # WARNING: known issue that reduces mAP in https://github.com/ultralytics/ultralytics/pull/4708
@@ -246,18 +246,18 @@ class BaseValidator:
                     labels_idx, detections_idx = scipy.optimize.linear_sum_assignment(cost_matrix, maximize=True)
                     valid = cost_matrix[labels_idx, detections_idx] > 0
                     if valid.any():
-                        correct[detections_idx[valid], i] = True
+                        pd_iouv_matrix[detections_idx[valid], i] = True
             else:
-                matches = np.nonzero(iou >= threshold)  # IoU > threshold and classes match
-                matches = np.array(matches).T
-                if matches.shape[0]:
-                    if matches.shape[0] > 1:
-                        matches = matches[iou[matches[:, 0], matches[:, 1]].argsort()[::-1]]
-                        matches = matches[np.unique(matches[:, 1], return_index=True)[1]]
-                        # matches = matches[matches[:, 2].argsort()[::-1]]
-                        matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
-                    correct[matches[:, 1].astype(int), i] = True
-        return torch.tensor(correct, dtype=torch.bool, device=pred_classes.device)
+                iou_index = np.nonzero(iou >= threshold)  # IoU > threshold and classes match 
+                iou_index = np.array(iou_index).T #->(20, 2)
+                if iou_index.shape[0]:
+                    if iou_index.shape[0] > 1:
+                        iou_index = iou_index[iou[iou_index[:, 0], iou_index[:, 1]].argsort()[::-1]] #(20,)选出对应的20个iou 排序的索引 真实的索引  -》(20, 2)
+                        iou_index = iou_index[np.unique(iou_index[:, 1], return_index=True)[1]] #非重复预测框
+                        # iou_index = iou_index[iou_index[:, 2].argsort()[::-1]]
+                        iou_index = iou_index[np.unique(iou_index[:, 0], return_index=True)[1]] #非重复真实框 (12, 2)
+                    pd_iouv_matrix[iou_index[:, 1].astype(int), i] = True
+        return torch.tensor(pd_iouv_matrix, dtype=torch.bool, device=pd_cls.device)
 
     def add_callback(self, event: str, callback):
         """Appends the given callback."""

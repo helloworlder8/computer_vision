@@ -26,14 +26,14 @@ class SegmentationPredictor(DetectionPredictor):
         self.args.task = "segment"
 
     def postprocess(self, preds, new_img, orig_imgs):
-        """Applies non-max suppression and processes detections for each image in an input batch."""
+        """Applies non-max suppression and processes predn for each image in an input batch."""
         non_max_suppression_preds = ops.non_max_suppression(
             preds[0], #torch.Size([1, 37, 16128])
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             agnostic=self.args.agnostic_nms,
             max_det=self.args.max_det,
-            num_classes=len(self.model.names),
+            num_cls=len(self.model.names),
             classes=self.args.classes,
         )
 

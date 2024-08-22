@@ -62,16 +62,16 @@ class PoseValidator(DetectionValidator):
         )
 
     def postprocess(self, preds):
-        """Apply non-maximum suppression and return detections with high confidence scores."""
+        """Apply non-maximum suppression and return predn with high confidence scores."""
         return ops.non_max_suppression(
             preds,
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             labels=self.lb,
             multi_label=True,
             agnostic=self.args.single_cls,
             max_det=self.args.max_det,
-            num_classes=self.nc,
+            num_cls=self.nc,
         )
 
     def init_metrics(self, model):
@@ -81,7 +81,7 @@ class PoseValidator(DetectionValidator):
         is_pose = self.kpt_shape == [17, 3]
         nkpt = self.kpt_shape[0]
         self.sigma = OKS_SIGMA if is_pose else np.ones(nkpt) / nkpt
-        self.stats = dict(tp_p=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
+        self.stats_dict = dict(tp_p=[], tp=[], conf=[], pd_cls=[], gt_cls=[], target_unique_cls=[])
 
     def _prepare_batch(self, si, batch):
         """Prepares a batch for processing by converting keypoints to float and moving to device."""
@@ -110,21 +110,21 @@ class PoseValidator(DetectionValidator):
             npr = len(pred)
             stat = dict(
                 conf=torch.zeros(0, device=self.device),
-                pred_cls=torch.zeros(0, device=self.device),
+                pd_cls=torch.zeros(0, device=self.device),
                 tp=torch.zeros(npr, self.niou, dtype=torch.bool, device=self.device),
                 tp_p=torch.zeros(npr, self.niou, dtype=torch.bool, device=self.device),
             )
             pbatch = self._prepare_batch(si, batch)
             cls, bbox = pbatch.pop("cls"), pbatch.pop("bbox")
             nl = len(cls)
-            stat["target_cls"] = cls
-            stat["target_img"] = cls.unique()
+            stat["gt_cls"] = cls
+            stat["target_unique_cls"] = cls.unique()
             if npr == 0:
                 if nl:
-                    for k in self.stats.keys():
-                        self.stats[k].append(stat[k])
+                    for k in self.stats_dict.keys():
+                        self.stats_dict[k].append(stat[k])
                     if self.args.plots:
-                        self.confusion_matrix.process_batch(detections=None, gt_bboxes=bbox, gt_cls=cls)
+                        self.confusion_matrix.process_batch(predn=None, gt_bboxes=bbox, gt_cls=cls)
                 continue
 
             # Predictions
@@ -132,7 +132,7 @@ class PoseValidator(DetectionValidator):
                 pred[:, 5] = 0
             predn, pred_kpts = self._prepare_pred(pred, pbatch)
             stat["conf"] = predn[:, 4]
-            stat["pred_cls"] = predn[:, 5]
+            stat["pd_cls"] = predn[:, 5]
 
             # Evaluate
             if nl:
@@ -141,8 +141,8 @@ class PoseValidator(DetectionValidator):
                 if self.args.plots:
                     self.confusion_matrix.process_batch(predn, bbox, cls)
 
-            for k in self.stats.keys():
-                self.stats[k].append(stat[k])
+            for k in self.stats_dict.keys():
+                self.stats_dict[k].append(stat[k])
 
             # Save
             if self.args.save_json:
@@ -156,12 +156,12 @@ class PoseValidator(DetectionValidator):
                     self.save_dir / "labels" / f'{Path(batch["im_file"][si]).stem}.txt',
                 )
 
-    def _process_batch(self, detections, gt_bboxes, gt_cls, pred_kpts=None, gt_kpts=None):
+    def _process_batch(self, predn, gt_bboxes, gt_cls, pred_kpts=None, gt_kpts=None):
         """
-        Return correct prediction matrix by computing Intersection over Union (IoU) between detections and ground truth.
+        Return correct prediction matrix by computing Intersection over Union (IoU) between predn and ground truth.
 
         Args:
-            detections (torch.Tensor): Tensor with shape (N, 6) representing detection boxes and scores, where each
+            predn (torch.Tensor): Tensor with shape (N, 6) representing detection boxes and scores, where each
                 detection is of the format (x1, y1, x2, y2, conf, class).
             gt_bboxes (torch.Tensor): Tensor with shape (M, 4) representing ground truth bounding boxes, where each
                 box is of the format (x1, y1, x2, y2).
@@ -172,16 +172,16 @@ class PoseValidator(DetectionValidator):
 
         Returns:
             torch.Tensor: A tensor with shape (N, 10) representing the correct prediction matrix for 10 IoU levels,
-                where N is the number of detections.
+                where N is the number of predn.
 
         Example:
             ```python
-            detections = torch.rand(100, 6)  # 100 predictions: (x1, y1, x2, y2, conf, class)
+            predn = torch.rand(100, 6)  # 100 predictions: (x1, y1, x2, y2, conf, class)
             gt_bboxes = torch.rand(50, 4)  # 50 ground truth boxes: (x1, y1, x2, y2)
             gt_cls = torch.randint(0, 2, (50,))  # 50 ground truth class indices
             pred_kpts = torch.rand(100, 51)  # 100 predicted keypoints
             gt_kpts = torch.rand(50, 51)  # 50 ground truth keypoints
-            correct_preds = _process_batch(detections, gt_bboxes, gt_cls, pred_kpts, gt_kpts)
+            correct_preds = _process_batch(predn, gt_bboxes, gt_cls, pred_kpts, gt_kpts)
             ```
 
         Note:
@@ -192,9 +192,9 @@ class PoseValidator(DetectionValidator):
             area = ops.xyxy2xywh(gt_bboxes)[:, 2:].prod(1) * 0.53
             iou = kpt_iou(gt_kpts, pred_kpts, sigma=self.sigma, area=area)
         else:  # boxes
-            iou = box_iou(gt_bboxes, detections[:, :4])
+            iou = box_iou(gt_bboxes, predn[:, :4])
 
-        return self.match_predictions(detections[:, 5], gt_cls, iou)
+        return self.create_pd_iouv_matrix(predn[:, 5], gt_cls, iou)
 
     def plot_val_samples(self, batch, ni):
         """Plots and saves validation set samples with predicted bounding boxes and keypoints."""
@@ -224,7 +224,7 @@ class PoseValidator(DetectionValidator):
         )  # pred
 
     def save_one_txt(self, predn, pred_kpts, save_conf, shape, file):
-        """Save YOLO detections to a txt file in normalized coordinates in a specific format."""
+        """Save YOLO predn to a txt file in normalized coordinates in a specific format."""
         from ultralytics.engine.results import Results
 
         Results(

@@ -57,7 +57,7 @@ After performing the [Segment Task](../tasks/segment.md), it's sometimes desirab
         img = np.copy(r.orig_img)
         img_name = Path(r.path).stem  # source image base-name
 
-        # Iterate each object contour (multiple detections)
+        # Iterate each object contour (multiple predn)
         for ci, c in enumerate(r):
             # (1) Get detection class name
             label = c.names[c.boxes.cls.tolist().pop()]

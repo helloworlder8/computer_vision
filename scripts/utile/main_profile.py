@@ -31,7 +31,7 @@ def process_all_models(directory,ch):
 
 
 if __name__ == '__main__':
-    model_directory = "runs/detect/ALSSn-BIRDSAI/ALSSn.yaml"
+    model_directory = "runs/detect/ALSSn-LCA_22-BIRDSAI-0.873/ALSSn-LCA_22.yaml"
     ch = 1
     # 检查model_directory是文件还是文件夹
     if os.path.isfile(model_directory):

@@ -71,7 +71,7 @@ class RTDETRValidator(DetectionValidator):
         For further details on the attributes and methods, refer to the parent DetectionValidator class.
     """
 
-    def build_dataset(self, img_path, mode="val", batch=None):
+    def build_dataset(self, img_path, batch_size=None, mode="val"):
         """
         Build an RTDETR Dataset.
 
@@ -83,7 +83,7 @@ class RTDETRValidator(DetectionValidator):
         return RTDETRDataset(
             img_path=img_path,
             imgsz=self.args.imgsz,
-            batch_size=batch,
+            batch_size=batch_size,
             augment=False,  # no augmentation
             hyp=self.args,
             rect=False,  # no rect

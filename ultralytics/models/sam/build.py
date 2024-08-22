@@ -152,7 +152,7 @@ def _build_sam(
         TinyViT(
             img_size=1024,
             in_chans=3,
-            num_classes=1000,
+            num_cls=1000,
             embed_dims=encoder_embed_dim,
             depths=encoder_depth,
             num_heads=encoder_num_heads,

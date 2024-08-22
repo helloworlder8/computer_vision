@@ -313,7 +313,7 @@ class BasePredictor:
     def setup_model(self, model, verbose=True):
         """Initialize YOLO model with given parameters and set it to evaluation mode."""
         self.model = AutoBackend(
-            weights=model or self.args.model_name,
+            models=model or self.args.model_name,
             device=select_device(self.args.device, verbose=verbose),
             dnn=self.args.dnn,
             data=self.args.data,

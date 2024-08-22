@@ -101,7 +101,7 @@ Thank you to Joseph Redmon and Ali Farhadi for developing the original YOLOv3.
 
 ### What are the differences between YOLOv3, YOLOv3-Ultralytics, and YOLOv3u?
 
-YOLOv3 is the third iteration of the YOLO (You Only Look Once) object detection algorithm developed by Joseph Redmon, known for its balance of accuracy and speed, utilizing three different scales (13x13, 26x26, and 52x52) for detections. YOLOv3-Ultralytics is Ultralytics' adaptation of YOLOv3 that adds support for more pre-trained models and facilitates easier model customization. YOLOv3u is an upgraded variant of YOLOv3-Ultralytics, integrating the anchor-free, objectness-free split head from YOLOv8, improving detection robustness and accuracy for various object sizes. For more details on the variants, refer to the [YOLOv3 series](https://github.com/ultralytics/yolov3).
+YOLOv3 is the third iteration of the YOLO (You Only Look Once) object detection algorithm developed by Joseph Redmon, known for its balance of accuracy and speed, utilizing three different scales (13x13, 26x26, and 52x52) for predn. YOLOv3-Ultralytics is Ultralytics' adaptation of YOLOv3 that adds support for more pre-trained models and facilitates easier model customization. YOLOv3u is an upgraded variant of YOLOv3-Ultralytics, integrating the anchor-free, objectness-free split head from YOLOv8, improving detection robustness and accuracy for various object sizes. For more details on the variants, refer to the [YOLOv3 series](https://github.com/ultralytics/yolov3).
 
 ### How can I train a YOLOv3 model using Ultralytics?
 

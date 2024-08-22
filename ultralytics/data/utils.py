@@ -473,7 +473,7 @@ class HUBDatasetStats:
 
         self.hub_dir = Path(f'{data["path"]}-hub')
         self.im_dir = self.hub_dir / "images"
-        self.stats = {"nc": len(data["names"]), "names": list(data["names"].values())}  # statistics dictionary
+        self.stats_dict = {"nc": len(data["names"]), "names": list(data["names"].values())}  # statistics dictionary
         self.data = data
 
     @staticmethod
@@ -509,7 +509,7 @@ class HUBDatasetStats:
             return [[int(c[0]), *(round(float(x), 4) for x in points)] for c, points in zipped]
 
         for split in "train", "val", "test":
-            self.stats[split] = None  # predefine
+            self.stats_dict[split] = None  # predefine
             path = self.data.get(split)
 
             # Check split
@@ -529,7 +529,7 @@ class HUBDatasetStats:
                 for img in dataset.imgs:
                     x[img[1]] += 1
 
-                self.stats[split] = {
+                self.stats_dict[split] = {
                     "instance_stats": {"total": len(dataset), "per_class": x.tolist()},
                     "image_stats": {"total": len(dataset), "unlabelled": 0, "per_class": x.tolist()},
                     "labels": [{Path(k).name: v} for k, v in dataset.imgs],
@@ -544,7 +544,7 @@ class HUBDatasetStats:
                         for label in TQDM(dataset.labels, total=len(dataset), desc="Statistics")
                     ]
                 )  # shape(128x80)
-                self.stats[split] = {
+                self.stats_dict[split] = {
                     "instance_stats": {"total": int(x.sum()), "per_class": x.sum(0).tolist()},
                     "image_stats": {
                         "total": len(dataset),
@@ -560,10 +560,10 @@ class HUBDatasetStats:
             stats_path = self.hub_dir / "stats.json"
             LOGGER.info(f"Saving {stats_path.resolve()}...")
             with open(stats_path, "w") as f:
-                json.dump(self.stats, f)  # save stats.json
+                json.dump(self.stats_dict, f)  # save stats.json
         if verbose:
-            LOGGER.info(json.dumps(self.stats, indent=2, sort_keys=False))
-        return self.stats
+            LOGGER.info(json.dumps(self.stats_dict, indent=2, sort_keys=False))
+        return self.stats_dict
 
     def process_images(self):
         """Compress images for Ultralytics HUB."""

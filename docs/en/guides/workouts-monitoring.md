@@ -131,7 +131,7 @@ Monitoring workouts through pose estimation with [Ultralytics YOLOv8](https://gi
 | `imgsz`         | `int or tuple` | `640`                  | image size as scalar or (h, w) list, i.e. (640, 480)                       |
 | `half`          | `bool`         | `False`                | use half precision (FP16)                                                  |
 | `device`        | `None or str`  | `None`                 | device to run on, i.e. cuda device=0/1/2/3 or device=cpu                   |
-| `max_det`       | `int`          | `300`                  | maximum number of detections per image                                     |
+| `max_det`       | `int`          | `300`                  | maximum number of predn per image                                     |
 | `vid_stride`    | `bool`         | `False`                | video frame-rate stride                                                    |
 | `stream_buffer` | `bool`         | `False`                | buffer all streaming frames (True) or return the most recent frame (False) |
 | `visualize`     | `bool`         | `False`                | visualize model features                                                   |

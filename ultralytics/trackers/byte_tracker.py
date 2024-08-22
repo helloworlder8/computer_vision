@@ -227,10 +227,10 @@ class BYTETracker:
         kalman_filter (object): Kalman Filter object.
 
     Methods:
-        update(results, img=None): Updates object tracker with new detections.
+        update(results, img=None): Updates object tracker with new predn.
         get_kalmanfilter(): Returns a Kalman filter object for tracking bounding boxes.
-        init_track(dets, scores, cls, img=None): Initialize object tracking with detections.
-        get_dists(tracks, detections): Calculates the distance between tracks and detections.
+        init_track(dets, scores, cls, img=None): Initialize object tracking with predn.
+        get_dists(tracks, predn): Calculates the distance between tracks and predn.
         multi_predict(tracks): Predicts the location of tracks.
         reset_id(): Resets the ID counter of STrack.
         joint_stracks(tlista, tlistb): Combines two lists of stracks.
@@ -251,7 +251,7 @@ class BYTETracker:
         self.reset_id()
 
     def update(self, results, img=None):
-        """Updates object tracker with new detections and returns tracked object bounding boxes."""
+        """Updates object tracker with new predn and returns tracked object bounding boxes."""
         self.frame_id += 1
         activated_stracks = []
         refind_stracks = []
@@ -276,7 +276,7 @@ class BYTETracker:
         cls_keep = cls[remain_inds]
         cls_second = cls[inds_second]
 
-        detections = self.init_track(dets, scores_keep, cls_keep, img)
+        predn = self.init_track(dets, scores_keep, cls_keep, img)
         # Add newly detected tracklets to tracked_stracks
         unconfirmed = []
         tracked_stracks = []  # type: list[STrack]
@@ -294,19 +294,19 @@ class BYTETracker:
             STrack.multi_gmc(strack_pool, warp)
             STrack.multi_gmc(unconfirmed, warp)
 
-        dists = self.get_dists(strack_pool, detections)
+        dists = self.get_dists(strack_pool, predn)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=self.args.match_thresh)
 
         for itracked, idet in matches:
             track = strack_pool[itracked]
-            det = detections[idet]
+            det = predn[idet]
             if track.state == TrackState.Tracked:
                 track.update(det, self.frame_id)
                 activated_stracks.append(track)
             else:
                 track.re_activate(det, self.frame_id, new_id=False)
                 refind_stracks.append(track)
-        # Step 3: Second association, with low score detection boxes association the untrack to the low score detections
+        # Step 3: Second association, with low score detection boxes association the untrack to the low score predn
         detections_second = self.init_track(dets_second, scores_second, cls_second, img)
         r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]
         # TODO
@@ -328,11 +328,11 @@ class BYTETracker:
                 track.mark_lost()
                 lost_stracks.append(track)
         # Deal with unconfirmed tracks, usually tracks with only one beginning frame
-        detections = [detections[i] for i in u_detection]
-        dists = self.get_dists(unconfirmed, detections)
+        predn = [predn[i] for i in u_detection]
+        dists = self.get_dists(unconfirmed, predn)
         matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)
         for itracked, idet in matches:
-            unconfirmed[itracked].update(detections[idet], self.frame_id)
+            unconfirmed[itracked].update(predn[idet], self.frame_id)
             activated_stracks.append(unconfirmed[itracked])
         for it in u_unconfirmed:
             track = unconfirmed[it]
@@ -340,7 +340,7 @@ class BYTETracker:
             removed_stracks.append(track)
         # Step 4: Init new stracks
         for inew in u_detection:
-            track = detections[inew]
+            track = predn[inew]
             if track.score < self.args.new_track_thresh:
                 continue
             track.activate(self.kalman_filter, self.frame_id)
@@ -369,15 +369,15 @@ class BYTETracker:
         return KalmanFilterXYAH()
 
     def init_track(self, dets, scores, cls, img=None):
-        """Initialize object tracking with detections and scores using STrack algorithm."""
-        return [STrack(xyxy, s, c) for (xyxy, s, c) in zip(dets, scores, cls)] if len(dets) else []  # detections
+        """Initialize object tracking with predn and scores using STrack algorithm."""
+        return [STrack(xyxy, s, c) for (xyxy, s, c) in zip(dets, scores, cls)] if len(dets) else []  # predn
 
-    def get_dists(self, tracks, detections):
-        """Calculates the distance between tracks and detections using IoU and fuses scores."""
-        dists = matching.iou_distance(tracks, detections)
+    def get_dists(self, tracks, predn):
+        """Calculates the distance between tracks and predn using IoU and fuses scores."""
+        dists = matching.iou_distance(tracks, predn)
         # TODO: mot20
         # if not self.args.mot20:
-        dists = matching.fuse_score(dists, detections)
+        dists = matching.fuse_score(dists, predn)
         return dists
 
     def multi_predict(self, tracks):

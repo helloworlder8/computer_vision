@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 	// Run inference on the input image
 	inference.RunInference(image);
 	
-	// Display the image with the detections
+	// Display the image with the predn
 	cv::imshow("image", image);
 	cv::waitKey(0);
 

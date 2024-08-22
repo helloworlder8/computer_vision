@@ -949,7 +949,7 @@ class Albumentations:
             LOGGER.info(f"{prefix}{e}")
 
     def __call__(self, labels):
-        """Generates object detections and returns a dictionary with detection results."""
+        """Generates object predn and returns a dictionary with detection results."""
         if self.transform is None or random.random() > self.p:
             return labels
 

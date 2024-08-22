@@ -81,7 +81,7 @@ class AutoBackend(nn.Module):
     @torch.no_grad()
     def __init__(
         self,
-        weights="yolov8n.pt",
+        models="yolov8n.pt",
         device=torch.device("cpu"),
         dnn=False,
         data=None,
@@ -94,7 +94,7 @@ class AutoBackend(nn.Module):
         Initialize the AutoBackend for inference.
 
         Args:
-            weights (str): Path to the model weights file. Defaults to 'yolov8n.pt'.
+            models (str): Path to the model models file. Defaults to 'yolov8n.pt'.
             device (torch.device): Device to run the model on. Defaults to CPU.
             dnn (bool): Use OpenCV DNN module for ONNX inference. Defaults to False.
             data (str | Path | optional): Path to the additional data.yaml file containing class names. Optional.
@@ -104,8 +104,8 @@ class AutoBackend(nn.Module):
             verbose (bool): Enable verbose logging. Defaults to True.
         """
         super().__init__()
-        w = str(weights[0] if isinstance(weights, list) else weights)
-        nn_module = isinstance(weights, torch.nn.Module)
+        w = str(models[0] if isinstance(models, list) else models)
+        nn_module = isinstance(models, torch.nn.Module)
         (
             pt,
             jit,
@@ -139,7 +139,7 @@ class AutoBackend(nn.Module):
 
         # In-memory PyTorch model
         if nn_module:
-            model = weights.to(device)
+            model = models.to(device)
             if fuse:
                 model = model.fuse(verbose=verbose)
             if hasattr(model, "kpt_shape"):
@@ -155,7 +155,7 @@ class AutoBackend(nn.Module):
             from ultralytics.nn.tasks import attempt_load_weights
 
             model = attempt_load_weights(
-                weights if isinstance(weights, list) else w, device=device, inplace=True, fuse=fuse
+                models if isinstance(models, list) else w, device=device, inplace=True, fuse=fuse
             )
             if hasattr(model, "kpt_shape"):
                 kpt_shape = model.kpt_shape  # pose-only
@@ -418,7 +418,7 @@ class AutoBackend(nn.Module):
             names = metadata["names"]
             kpt_shape = metadata.get("kpt_shape")
         elif not (pt or triton or nn_module):
-            LOGGER.warning(f"WARNING ⚠️ Metadata not found for 'model={weights}'")
+            LOGGER.warning(f"WARNING ⚠️ Metadata not found for 'model={models}'")
 
         # Check names
         if "names" not in locals():  # names missing
@@ -641,7 +641,7 @@ class AutoBackend(nn.Module):
             p: path to the model file. Defaults to path/to/model.pt
 
         Examples:
-            >>> model = AutoBackend(weights="path/to/model.onnx")
+            >>> model = AutoBackend(models="path/to/model.onnx")
             >>> model_type = model._model_type()  # returns "onnx"
         """
         from ultralytics.engine.exporter import export_formats

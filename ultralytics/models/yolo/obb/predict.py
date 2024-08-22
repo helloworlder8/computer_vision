@@ -32,10 +32,10 @@ class OBBPredictor(DetectionPredictor):
         preds = ops.non_max_suppression(
             preds,
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             agnostic=self.args.agnostic_nms,
             max_det=self.args.max_det,
-            num_classes=len(self.model.names),
+            num_cls=len(self.model.names),
             classes=self.args.classes,
             rotated=True,
         )

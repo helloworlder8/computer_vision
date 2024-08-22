@@ -57,11 +57,11 @@ One of the sections of the output is the class-wise breakdown of performance met
 
 - **Box(P, R, mAP50, mAP50-95)**: This metric provides insights into the model's performance in detecting objects:
 
-    - **P (Precision)**: The accuracy of the detected objects, indicating how many detections were correct.
+    - **P (Precision)**: The accuracy of the detected objects, indicating how many predn were correct.
 
     - **R (Recall)**: The ability of the model to identify all instances of objects in the images.
 
-    - **mAP50**: Mean average precision calculated at an intersection over union (IoU) threshold of 0.50. It's a measure of the model's accuracy considering only the "easy" detections.
+    - **mAP50**: Mean average precision calculated at an intersection over union (IoU) threshold of 0.50. It's a measure of the model's accuracy considering only the "easy" predn.
 
     - **mAP50-95**: The average of the mean average precision calculated at varying IoU thresholds, ranging from 0.50 to 0.95. It gives a comprehensive view of the model's performance across different levels of detection difficulty.
 
@@ -105,7 +105,7 @@ Choosing the right metrics to evaluate often depends on the specific application
 
 - **IoU:** Essential when precise object location is crucial.
 
-- **Precision:** Important when minimizing false detections is a priority.
+- **Precision:** Important when minimizing false predn is a priority.
 
 - **Recall:** Vital when it's important to detect every instance of an object.
 
@@ -137,7 +137,7 @@ Real-world examples can help clarify how these metrics work in practice.
 
 - **Situation:** mAP and F1 Score are suboptimal, but while Recall is good, Precision isn't.
 
-- **Interpretation & Action:** There might be too many incorrect detections. Tightening confidence thresholds could reduce these, though it might also slightly decrease recall.
+- **Interpretation & Action:** There might be too many incorrect predn. Tightening confidence thresholds could reduce these, though it might also slightly decrease recall.
 
 ### Case 2
 
@@ -187,7 +187,7 @@ Intersection over Union (IoU) measures the overlap between the predicted and gro
 
 ### Why is the F1 Score important for evaluating YOLOv8 models in object detection?
 
-The F1 Score is important for evaluating YOLOv8 models because it provides a harmonic mean of precision and recall, balancing both false positives and false negatives. It is particularly valuable when dealing with imbalanced datasets or applications where either precision or recall alone is insufficient. A high F1 Score indicates that the model effectively detects objects while minimizing both missed detections and false alarms, making it suitable for critical applications like security systems and medical imaging.
+The F1 Score is important for evaluating YOLOv8 models because it provides a harmonic mean of precision and recall, balancing both false positives and false negatives. It is particularly valuable when dealing with imbalanced datasets or applications where either precision or recall alone is insufficient. A high F1 Score indicates that the model effectively detects objects while minimizing both missed predn and false alarms, making it suitable for critical applications like security systems and medical imaging.
 
 ### What are the key advantages of using Ultralytics YOLOv8 for real-time object detection?
 

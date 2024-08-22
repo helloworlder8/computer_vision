@@ -771,7 +771,7 @@ class TinyViT(nn.Module):
 
     Attributes:
         img_size (int): Input image size.
-        num_classes (int): Number of classification classes.
+        num_cls (int): Number of classification classes.
         depths (List[int]): Number of blocks in each stage.
         num_layers (int): Total number of layers in the network.
         mlp_ratio (float): Ratio of MLP hidden dimension to embedding dimension.
@@ -790,7 +790,7 @@ class TinyViT(nn.Module):
         forward: Performs a forward pass through the entire network.
 
     Examples:
-        >>> model = TinyViT(img_size=224, num_classes=1000)
+        >>> model = TinyViT(img_size=224, num_cls=1000)
         >>> x = torch.randn(1, 3, 224, 224)
         >>> features = model.forward_features(x)
         >>> print(features.shape)
@@ -801,7 +801,7 @@ class TinyViT(nn.Module):
         self,
         img_size=224,
         in_chans=3,
-        num_classes=1000,
+        num_cls=1000,
         embed_dims=(96, 192, 384, 768),
         depths=(2, 2, 6, 2),
         num_heads=(3, 6, 12, 24),
@@ -823,7 +823,7 @@ class TinyViT(nn.Module):
         Args:
             img_size (int): Size of the input image. Default is 224.
             in_chans (int): Number of input channels. Default is 3.
-            num_classes (int): Number of classes for classification. Default is 1000.
+            num_cls (int): Number of classes for classification. Default is 1000.
             embed_dims (Tuple[int, int, int, int]): Embedding dimensions for each stage.
                 Default is (96, 192, 384, 768).
             depths (Tuple[int, int, int, int]): Number of blocks in each stage. Default is (2, 2, 6, 2).
@@ -839,7 +839,7 @@ class TinyViT(nn.Module):
             layer_lr_decay (float): Layer-wise learning rate decay factor. Default is 1.0.
 
         Examples:
-            >>> model = TinyViT(img_size=224, num_classes=1000)
+            >>> model = TinyViT(img_size=224, num_cls=1000)
             >>> x = torch.randn(1, 3, 224, 224)
             >>> output = model(x)
             >>> print(output.shape)
@@ -847,7 +847,7 @@ class TinyViT(nn.Module):
         """
         super().__init__()
         self.img_size = img_size
-        self.num_classes = num_classes
+        self.num_cls = num_cls
         self.depths = depths
         self.num_layers = len(depths)
         self.mlp_ratio = mlp_ratio
@@ -897,7 +897,7 @@ class TinyViT(nn.Module):
 
         # Classifier head
         self.norm_head = nn.LayerNorm(embed_dims[-1])
-        self.head = nn.Linear(embed_dims[-1], num_classes) if num_classes > 0 else torch.nn.Identity()
+        self.head = nn.Linear(embed_dims[-1], num_cls) if num_cls > 0 else torch.nn.Identity()
 
         # Init weights
         self.apply(self._init_weights)

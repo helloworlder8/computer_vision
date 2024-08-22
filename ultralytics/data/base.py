@@ -222,7 +222,7 @@ class BaseDataset(Dataset):
         return success
 
     def set_rectangle(self):
-        """Sets the shape of bounding boxes for YOLO detections as rectangles."""
+        """Sets the shape of bounding boxes for YOLO predn as rectangles."""
         bi = np.floor(np.arange(self.ni) / self.batch_size).astype(int)  # batch index
         nb = bi[-1] + 1  # number of batches
 

@@ -90,7 +90,7 @@ def main(onnx_model, input_image):
     # Apply NMS (Non-maximum suppression)
     result_boxes = cv2.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
 
-    detections = []
+    predn = []
 
     # Iterate through NMS results to draw bounding boxes and labels
     for i in range(len(result_boxes)):
@@ -103,7 +103,7 @@ def main(onnx_model, input_image):
             "box": box,
             "scale": scale,
         }
-        detections.append(detection)
+        predn.append(detection)
         draw_bounding_box(
             original_image,
             class_ids[index],
@@ -119,7 +119,7 @@ def main(onnx_model, input_image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-    return detections
+    return predn
 
 
 if __name__ == "__main__":

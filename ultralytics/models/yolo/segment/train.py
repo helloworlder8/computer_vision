@@ -30,7 +30,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
         """Return an instance of SegmentationValidator for validation of YOLO model."""
         self.loss_names = "box_loss", "seg_loss", "cls_loss", "dfl_loss"
         return yolo.segment.SegmentationValidator(
-            self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
+            args=copy(self.args), dataloader=self.test_loader, save_dir=self.save_dir, _callbacks=self.callbacks
         )
 
     def plot_training_samples(self, batch, ni):

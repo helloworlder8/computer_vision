@@ -35,11 +35,11 @@ class PosePredictor(DetectionPredictor):
         preds = ops.non_max_suppression(
             preds,
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             agnostic=self.args.agnostic_nms,
             max_det=self.args.max_det,
             classes=self.args.classes,
-            num_classes=len(self.model.names),
+            num_cls=len(self.model.names),
         )
 
         if not isinstance(orig_imgs, list):  # input images are a torch.Tensor, not a list

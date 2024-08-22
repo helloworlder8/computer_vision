@@ -120,7 +120,7 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
     std::vector<int> nms_result;
     cv::dnn::NMSBoxes(boxes, confidences, modelScoreThreshold, modelNMSThreshold, nms_result);
 
-    std::vector<Detection> detections{};
+    std::vector<Detection> predn{};
     for (unsigned long i = 0; i < nms_result.size(); ++i)
     {
         int idx = nms_result[i];
@@ -139,10 +139,10 @@ std::vector<Detection> Inference::runInference(const cv::Mat &input)
         result.className = classes[result.class_id];
         result.box = boxes[idx];
 
-        detections.push_back(result);
+        predn.push_back(result);
     }
 
-    return detections;
+    return predn;
 }
 
 void Inference::loadClassesFromFile()

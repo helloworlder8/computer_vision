@@ -26,11 +26,11 @@ class GMC:
     Methods:
         __init__(self, method='sparseOptFlow', downscale=2): Initializes a GMC object with the specified method
                                                               and downscale factor.
-        apply(self, raw_frame, detections=None): Applies the chosen method to a raw frame and optionally uses
-                                                 provided detections.
-        applyEcc(self, raw_frame, detections=None): Applies the ECC algorithm to a raw frame.
-        applyFeatures(self, raw_frame, detections=None): Applies feature-based methods like ORB or SIFT to a raw frame.
-        applySparseOptFlow(self, raw_frame, detections=None): Applies the Sparse Optical Flow method to a raw frame.
+        apply(self, raw_frame, predn=None): Applies the chosen method to a raw frame and optionally uses
+                                                 provided predn.
+        applyEcc(self, raw_frame, predn=None): Applies the ECC algorithm to a raw frame.
+        applyFeatures(self, raw_frame, predn=None): Applies feature-based methods like ORB or SIFT to a raw frame.
+        applySparseOptFlow(self, raw_frame, predn=None): Applies the Sparse Optical Flow method to a raw frame.
     """
 
     def __init__(self, method: str = "sparseOptFlow", downscale: int = 2) -> None:
@@ -77,13 +77,13 @@ class GMC:
         self.prevDescriptors = None
         self.initializedFirstFrame = False
 
-    def apply(self, raw_frame: np.array, detections: list = None) -> np.array:
+    def apply(self, raw_frame: np.array, predn: list = None) -> np.array:
         """
         Apply object detection on a raw frame using specified method.
 
         Args:
             raw_frame (np.ndarray): The raw frame to be processed.
-            detections (list): List of detections to be used in the processing.
+            predn (list): List of predn to be used in the processing.
 
         Returns:
             (np.ndarray): Processed frame.
@@ -95,7 +95,7 @@ class GMC:
                    [4, 5, 6]])
         """
         if self.method in {"orb", "sift"}:
-            return self.applyFeatures(raw_frame, detections)
+            return self.applyFeatures(raw_frame, predn)
         elif self.method == "ecc":
             return self.applyEcc(raw_frame)
         elif self.method == "sparseOptFlow":
@@ -149,13 +149,13 @@ class GMC:
 
         return H
 
-    def applyFeatures(self, raw_frame: np.array, detections: list = None) -> np.array:
+    def applyFeatures(self, raw_frame: np.array, predn: list = None) -> np.array:
         """
         Apply feature-based methods like ORB or SIFT to a raw frame.
 
         Args:
             raw_frame (np.ndarray): The raw frame to be processed.
-            detections (list): List of detections to be used in the processing.
+            predn (list): List of predn to be used in the processing.
 
         Returns:
             (np.ndarray): Processed frame.
@@ -179,8 +179,8 @@ class GMC:
         # Find the keypoints
         mask = np.zeros_like(frame)
         mask[int(0.02 * height) : int(0.98 * height), int(0.02 * width) : int(0.98 * width)] = 255
-        if detections is not None:
-            for det in detections:
+        if predn is not None:
+            for det in predn:
                 tlbr = (det[:4] / self.downscale).astype(np.int_)
                 mask[tlbr[1] : tlbr[3], tlbr[0] : tlbr[2]] = 0
 

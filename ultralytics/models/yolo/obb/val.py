@@ -41,21 +41,21 @@ class OBBValidator(DetectionValidator):
         return ops.non_max_suppression(
             preds,
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             labels=self.lb,
-            num_classes=self.nc,
+            num_cls=self.nc,
             multi_label=True,
             agnostic=self.args.single_cls,
             max_det=self.args.max_det,
             rotated=True,
         )
 
-    def _process_batch(self, detections, gt_bboxes, gt_cls):
+    def _process_batch(self, predn, gt_bboxes, gt_cls):
         """
-        Perform computation of the correct prediction matrix for a batch of detections and ground truth bounding boxes.
+        Perform computation of the correct prediction matrix for a batch of predn and ground truth bounding boxes.
 
         Args:
-            detections (torch.Tensor): A tensor of shape (N, 7) representing the detected bounding boxes and associated
+            predn (torch.Tensor): A tensor of shape (N, 7) representing the detected bounding boxes and associated
                 data. Each detection is represented as (x1, y1, x2, y2, conf, class, angle).
             gt_bboxes (torch.Tensor): A tensor of shape (M, 5) representing the ground truth bounding boxes. Each box is
                 represented as (x1, y1, x2, y2, angle).
@@ -67,17 +67,17 @@ class OBBValidator(DetectionValidator):
 
         Example:
             ```python
-            detections = torch.rand(100, 7)  # 100 sample detections
+            predn = torch.rand(100, 7)  # 100 sample predn
             gt_bboxes = torch.rand(50, 5)  # 50 sample ground truth boxes
             gt_cls = torch.randint(0, 5, (50,))  # 50 ground truth class labels
-            correct_matrix = OBBValidator._process_batch(detections, gt_bboxes, gt_cls)
+            correct_matrix = OBBValidator._process_batch(predn, gt_bboxes, gt_cls)
             ```
 
         Note:
-            This method relies on `batch_probiou` to calculate IoU between detections and ground truth bounding boxes.
+            This method relies on `batch_probiou` to calculate IoU between predn and ground truth bounding boxes.
         """
-        iou = batch_probiou(gt_bboxes, torch.cat([detections[:, :4], detections[:, -1:]], dim=-1))
-        return self.match_predictions(detections[:, 5], gt_cls, iou)
+        iou = batch_probiou(gt_bboxes, torch.cat([predn[:, :4], predn[:, -1:]], dim=-1))
+        return self.create_pd_iouv_matrix(predn[:, 5], gt_cls, iou)
 
     def _prepare_batch(self, si, batch):
         """Prepares and returns a batch for OBB validation."""
@@ -129,7 +129,7 @@ class OBBValidator(DetectionValidator):
             )
 
     def save_one_txt(self, predn, save_conf, shape, file):
-        """Save YOLO detections to a txt file in normalized coordinates in a specific format."""
+        """Save YOLO predn to a txt file in normalized coordinates in a specific format."""
         import numpy as np
 
         from ultralytics.engine.results import Results

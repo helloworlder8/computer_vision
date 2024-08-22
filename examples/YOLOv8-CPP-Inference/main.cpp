@@ -37,10 +37,10 @@ int main(int argc, char **argv)
         // Inference starts here...
         std::vector<Detection> output = inf.runInference(frame);
 
-        int detections = output.size();
-        std::cout << "Number of detections:" << detections << std::endl;
+        int predn = output.size();
+        std::cout << "Number of predn:" << predn << std::endl;
 
-        for (int i = 0; i < detections; ++i)
+        for (int i = 0; i < predn; ++i)
         {
             Detection detection = output[i];
 

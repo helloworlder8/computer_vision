@@ -42,7 +42,7 @@ class NASPredictor(BasePredictor):
         preds = ops.non_max_suppression(
             preds,
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             agnostic=self.args.agnostic_nms,
             max_det=self.args.max_det,
             classes=self.args.classes,

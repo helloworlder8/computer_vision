@@ -292,7 +292,7 @@ class Predictor(BasePredictor):
             crop_masks = torch.cat(crop_masks)
             crop_bboxes = torch.cat(crop_bboxes)
             crop_scores = torch.cat(crop_scores)
-            keep = torchvision.ops.nms(crop_bboxes, crop_scores, self.args.iou)  # NMS
+            keep = torchvision.ops.nms(crop_bboxes, crop_scores, self.args.NMS_IoU)  # NMS
             crop_bboxes = uncrop_boxes_xyxy(crop_bboxes[keep], crop_region)
             crop_masks = uncrop_masks(crop_masks[keep], crop_region, ih, iw)
             crop_scores = crop_scores[keep]

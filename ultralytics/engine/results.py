@@ -101,7 +101,7 @@ class Results(SimpleClass):
         plot(...): Plots detection results on an input image, returning an annotated image.
         show(): Show annotated results to screen.
         save(filename): Save annotated results to file.
-        verbose(): Returns a log string for each task, detailing detections and classifications.
+        verbose(): Returns a log string for each task, detailing predn and classifications.
         save_txt(txt_file, save_conf=False): Saves detection results to a text file.
         save_crop(save_dir, file_name=Path("img.jpg")): Saves cropped detection images.
         tojson(normalize=False): Converts detection results to JSON format.
@@ -155,7 +155,7 @@ class Results(SimpleClass):
         return self._apply("__getitem__", idx)
 
     def __len__(self):
-        """Return the number of detections in the Results object from a non-empty attribute set (boxes, masks, etc.)."""
+        """Return the number of predn in the Results object from a non-empty attribute set (boxes, masks, etc.)."""
         for k in self._keys:
             v = getattr(self, k)
             if v is not None:
@@ -359,12 +359,12 @@ class Results(SimpleClass):
         probs = self.probs
         boxes = self.boxes
         if len(self) == 0:
-            return log_string if probs is not None else f"{log_string}(no detections), "
+            return log_string if probs is not None else f"{log_string}(no predn), "
         if probs is not None:
             log_string += f"{', '.join(f'{self.names[j]} {probs.data[j]:.2f}' for j in probs.top5)}, "
         if boxes:
             for c in boxes.cls.unique():
-                n = (boxes.cls == c).sum()  # detections per class
+                n = (boxes.cls == c).sum()  # predn per class
                 log_string += f"{n} {self.names[int(c)]}{'s' * (n > 1)}, "
         return log_string
 
@@ -391,7 +391,7 @@ class Results(SimpleClass):
 
         Notes:
             - The file will contain one line per detection or classification with the following structure:
-                - For detections: `class confidence x_center y_center width height`
+                - For predn: `class confidence x_center y_center width height`
                 - For classifications: `confidence class_name`
                 - For masks and keypoints, the specific formats will vary accordingly.
 

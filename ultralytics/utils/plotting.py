@@ -953,7 +953,7 @@ def plot_images(
         max_size: Maximum size of the output image grid.
         max_subplots: Maximum number of subplots in the image grid.
         save: Whether to save the plotted image grid to a file.
-        conf_thres: Confidence threshold for displaying detections.
+        conf_thres: Confidence threshold for displaying predn.
 
     Returns:
         np.ndarray: Plotted image grid as a numpy array if save is False, None otherwise.

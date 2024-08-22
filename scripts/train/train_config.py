@@ -8,19 +8,20 @@ data = str(current_directory / Path('../../../datasets/BIRDSAI-FORE-BACKUP1.1/BI
 # data = str(current_directory / Path('../../../datasets/ISOD1.1/ISOD.yaml'))
 
 model_yaml1="ultralytics/cfg/models/ALSS/ALSSn.yaml"
-model_yaml2='ultralytics/cfg/models/ALSS/ALSSs.yaml'
-model_yaml3="ultralytics/cfg/models/ALSS/ALSSm.yaml"
+model_yaml2='ultralytics/cfg/models/ALSS/ALSSn.yaml'
+model_yaml3="ultralytics/cfg/models/ALSS/ALSSn.yaml"
 model_yaml4='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSn-CA.yaml'
 model_yaml5='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSs-CA.yaml'
 model_yaml6='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSm-CA.yaml'
 
-name1="ALSSn-BIRDSAI"
-name2='ALSSs-BIRDSAI'
-name3="ALSSm-BIRDSAI"
+name1="ALSSn-BIRDSAI-FinSiou"
+name2='ALSSn-BIRDSAI-Ciou'
+name3="ALSSn-BIRDSAI-300epoch"
 name4='ALSSn-CA-BIRDSAI'
 name5='ALSSs-CA-BIRDSAI'
 name6='ALSSm-CA-BIRDSAI'
 
+project="ALSSn-BIRDSAI"
 # 批 模 名
 batch1=-1
 batch2=-1

@@ -127,16 +127,16 @@ class BOTSORT(BYTETracker):
     An extended version of the BYTETracker class for YOLOv8, designed for object tracking with ReID and GMC algorithm.
 
     Attributes:
-        proximity_thresh (float): Threshold for spatial proximity (IoU) between tracks and detections.
-        appearance_thresh (float): Threshold for appearance similarity (ReID embeddings) between tracks and detections.
+        proximity_thresh (float): Threshold for spatial proximity (IoU) between tracks and predn.
+        appearance_thresh (float): Threshold for appearance similarity (ReID embeddings) between tracks and predn.
         encoder (object): Object to handle ReID embeddings, set to None if ReID is not enabled.
         gmc (GMC): An instance of the GMC algorithm for data association.
         args (object): Parsed command-line arguments containing tracking parameters.
 
     Methods:
         get_kalmanfilter(): Returns an instance of KalmanFilterXYWH for object tracking.
-        init_track(dets, scores, cls, img): Initialize track with detections, scores, and classes.
-        get_dists(tracks, detections): Get distances between tracks and detections using IoU and (optionally) ReID.
+        init_track(dets, scores, cls, img): Initialize track with predn, scores, and classes.
+        get_dists(tracks, predn): Get distances between tracks and predn using IoU and (optionally) ReID.
         multi_predict(tracks): Predict and track multiple objects with YOLOv8 model.
 
     Usage:
@@ -165,26 +165,26 @@ class BOTSORT(BYTETracker):
         return KalmanFilterXYWH()
 
     def init_track(self, dets, scores, cls, img=None):
-        """Initialize track with detections, scores, and classes."""
+        """Initialize track with predn, scores, and classes."""
         if len(dets) == 0:
             return []
         if self.args.with_reid and self.encoder is not None:
             features_keep = self.encoder.inference(img, dets)
-            return [BOTrack(xyxy, s, c, f) for (xyxy, s, c, f) in zip(dets, scores, cls, features_keep)]  # detections
+            return [BOTrack(xyxy, s, c, f) for (xyxy, s, c, f) in zip(dets, scores, cls, features_keep)]  # predn
         else:
-            return [BOTrack(xyxy, s, c) for (xyxy, s, c) in zip(dets, scores, cls)]  # detections
+            return [BOTrack(xyxy, s, c) for (xyxy, s, c) in zip(dets, scores, cls)]  # predn
 
-    def get_dists(self, tracks, detections):
-        """Get distances between tracks and detections using IoU and (optionally) ReID embeddings."""
-        dists = matching.iou_distance(tracks, detections)
+    def get_dists(self, tracks, predn):
+        """Get distances between tracks and predn using IoU and (optionally) ReID embeddings."""
+        dists = matching.iou_distance(tracks, predn)
         dists_mask = dists > self.proximity_thresh
 
         # TODO: mot20
         # if not self.args.mot20:
-        dists = matching.fuse_score(dists, detections)
+        dists = matching.fuse_score(dists, predn)
 
         if self.args.with_reid and self.encoder is not None:
-            emb_dists = matching.embedding_distance(tracks, detections) / 2.0
+            emb_dists = matching.embedding_distance(tracks, predn) / 2.0
             emb_dists[emb_dists > self.appearance_thresh] = 1.0
             emb_dists[dists_mask] = 1.0
             dists = np.minimum(dists, emb_dists)

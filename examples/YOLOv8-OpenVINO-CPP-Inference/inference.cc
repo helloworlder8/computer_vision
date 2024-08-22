@@ -88,10 +88,10 @@ void Inference::PostProcessing(cv::Mat &frame) {
 	std::vector<cv::Rect> box_list;
 
 	// Get the output tensor from the inference request
-	const float *detections = inference_request_.get_output_tensor().data<const float>();
-	const cv::Mat detection_outputs(model_output_shape_, CV_32F, (float *)detections); // Create OpenCV matrix from output tensor
+	const float *predn = inference_request_.get_output_tensor().data<const float>();
+	const cv::Mat detection_outputs(model_output_shape_, CV_32F, (float *)predn); // Create OpenCV matrix from output tensor
 
-	// Iterate over detections and collect class IDs, confidence scores, and bounding boxes
+	// Iterate over predn and collect class IDs, confidence scores, and bounding boxes
 	for (int i = 0; i < detection_outputs.cols; ++i) {
 		const cv::Mat classes_scores = detection_outputs.col(i).rowRange(4, detection_outputs.rows);
 
@@ -122,7 +122,7 @@ void Inference::PostProcessing(cv::Mat &frame) {
 	std::vector<int> NMS_result;
 	cv::dnn::NMSBoxes(box_list, confidence_list, model_confidence_threshold_, model_NMS_threshold_, NMS_result);
 
-	// Collect final detections after NMS
+	// Collect final predn after NMS
 	for (int i = 0; i < NMS_result.size(); ++i) {
 		Detection result;
 		const unsigned short id = NMS_result[i];

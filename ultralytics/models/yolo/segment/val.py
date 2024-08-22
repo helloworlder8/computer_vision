@@ -28,9 +28,9 @@ class SegmentationValidator(DetectionValidator):
         ```
     """
 
-    def __init__(self, dataloader=None, save_dir=None, pbar=None, args=None, _callbacks=None):
+    def __init__(self, args=None, dataloader=None, save_dir=None, pbar=None, _callbacks=None):
         """Initialize SegmentationValidator and set task to 'segment', metrics to SegmentMetrics."""
-        super().__init__(dataloader, save_dir, pbar, args, _callbacks)
+        super().__init__(args, dataloader, save_dir, pbar, _callbacks)
         self.plot_masks = None
         self.process = None
         self.args.task = "segment"
@@ -50,7 +50,7 @@ class SegmentationValidator(DetectionValidator):
             check_requirements("pycocotools>=2.0.6")
         # more accurate vs faster
         self.process = ops.process_mask_native if self.args.save_json or self.args.save_txt else ops.process_mask
-        self.stats = dict(tp_m=[], tp=[], conf=[], pred_cls=[], target_cls=[], target_img=[])
+        self.stats_dict = dict(tp_m=[], tp=[], conf=[], pd_cls=[], gt_cls=[], target_unique_cls=[])
 
     def get_desc(self):
         """Return a formatted description of evaluation metrics."""
@@ -69,16 +69,16 @@ class SegmentationValidator(DetectionValidator):
         )
 
     def postprocess(self, preds):
-        """Post-processes YOLO predictions and returns output detections with proto."""
+        """Post-processes YOLO predictions and returns output predn with proto."""
         p = ops.non_max_suppression(
             preds[0],
             self.args.conf,
-            self.args.iou,
+            self.args.NMS_IoU,
             labels=self.lb,
             multi_label=True,
             agnostic=self.args.single_cls,
             max_det=self.args.max_det,
-            num_classes=self.nc,
+            num_cls=self.nc,
         )
         proto = preds[1][-1] if len(preds[1]) == 3 else preds[1]  # second output is len 3 if pt, but only 1 if exported
         return p, proto
@@ -103,21 +103,21 @@ class SegmentationValidator(DetectionValidator):
             npr = len(pred)
             stat = dict(
                 conf=torch.zeros(0, device=self.device),
-                pred_cls=torch.zeros(0, device=self.device),
+                pd_cls=torch.zeros(0, device=self.device),
                 tp=torch.zeros(npr, self.niou, dtype=torch.bool, device=self.device),
                 tp_m=torch.zeros(npr, self.niou, dtype=torch.bool, device=self.device),
             )
             pbatch = self._prepare_batch(si, batch)
             cls, bbox = pbatch.pop("cls"), pbatch.pop("bbox")
             nl = len(cls)
-            stat["target_cls"] = cls
-            stat["target_img"] = cls.unique()
+            stat["gt_cls"] = cls
+            stat["target_unique_cls"] = cls.unique()
             if npr == 0:
                 if nl:
-                    for k in self.stats.keys():
-                        self.stats[k].append(stat[k])
+                    for k in self.stats_dict.keys():
+                        self.stats_dict[k].append(stat[k])
                     if self.args.plots:
-                        self.confusion_matrix.process_batch(detections=None, gt_bboxes=bbox, gt_cls=cls)
+                        self.confusion_matrix.process_batch(predn=None, gt_bboxes=bbox, gt_cls=cls)
                 continue
 
             # Masks
@@ -127,7 +127,7 @@ class SegmentationValidator(DetectionValidator):
                 pred[:, 5] = 0
             predn, pd_masks = self._prepare_pred(pred, pbatch, proto)
             stat["conf"] = predn[:, 4]
-            stat["pred_cls"] = predn[:, 5]
+            stat["pd_cls"] = predn[:, 5]
 
             # Evaluate
             if nl:
@@ -138,11 +138,11 @@ class SegmentationValidator(DetectionValidator):
                 if self.args.plots:
                     self.confusion_matrix.process_batch(predn, bbox, cls)
 
-            for k in self.stats.keys():
-                self.stats[k].append(stat[k])
+            for k in self.stats_dict.keys():
+                self.stats_dict[k].append(stat[k])
 
             pd_masks = torch.as_tensor(pd_masks, dtype=torch.uint8)
-            if self.args.plots and self.batch_i < 3:
+            if self.args.plots and self.batch_index < 3:
                 self.plot_masks.append(pd_masks[:15].cpu())  # filter top 15 to plot
 
             # Save
@@ -170,12 +170,12 @@ class SegmentationValidator(DetectionValidator):
         self.metrics.speed = self.speed
         self.metrics.confusion_matrix = self.confusion_matrix
 
-    def _process_batch(self, detections, gt_bboxes, gt_cls, pd_masks=None, gt_masks=None, overlap=False, masks=False):
+    def _process_batch(self, predn, gt_bboxes, gt_cls, pd_masks=None, gt_masks=None, overlap=False, masks=False):
         """
         Compute correct prediction matrix for a batch based on bounding boxes and optional masks.
 
         Args:
-            detections (torch.Tensor): Tensor of shape (N, 6) representing detected bounding boxes and
+            predn (torch.Tensor): Tensor of shape (N, 6) representing detected bounding boxes and
                 associated confidence scores and class indices. Each row is of the format [x1, y1, x2, y2, conf, class].
             gt_bboxes (torch.Tensor): Tensor of shape (M, 4) representing ground truth bounding box coordinates.
                 Each row is of the format [x1, y1, x2, y2].
@@ -195,10 +195,10 @@ class SegmentationValidator(DetectionValidator):
 
         Example:
             ```python
-            detections = torch.tensor([[25, 30, 200, 300, 0.8, 1], [50, 60, 180, 290, 0.75, 0]])
+            predn = torch.tensor([[25, 30, 200, 300, 0.8, 1], [50, 60, 180, 290, 0.75, 0]])
             gt_bboxes = torch.tensor([[24, 29, 199, 299], [55, 65, 185, 295]])
             gt_cls = torch.tensor([1, 0])
-            correct_preds = validator._process_batch(detections, gt_bboxes, gt_cls)
+            correct_preds = validator._process_batch(predn, gt_bboxes, gt_cls)
             ```
         """
         if masks:
@@ -212,9 +212,9 @@ class SegmentationValidator(DetectionValidator):
                 gt_masks = gt_masks.gt_(0.5)
             iou = mask_iou(gt_masks.view(gt_masks.shape[0], -1), pd_masks.view(pd_masks.shape[0], -1))
         else:  # boxes
-            iou = box_iou(gt_bboxes, detections[:, :4])
+            iou = box_iou(gt_bboxes, predn[:, :4])
 
-        return self.match_predictions(detections[:, 5], gt_cls, iou)
+        return self.create_pd_iouv_matrix(predn[:, 5], gt_cls, iou)
 
     def plot_val_samples(self, batch, ni):
         """Plots validation samples with bounding box labels."""
@@ -244,7 +244,7 @@ class SegmentationValidator(DetectionValidator):
         self.plot_masks.clear()
 
     def save_one_txt(self, predn, pd_masks, save_conf, shape, file):
-        """Save YOLO detections to a txt file in normalized coordinates in a specific format."""
+        """Save YOLO predn to a txt file in normalized coordinates in a specific format."""
         from ultralytics.engine.results import Results
 
         Results(

@@ -70,7 +70,7 @@ python action_recognition.py --source "https://www.youtube.com/watch?v=dQw4w9WgX
 - `--output-path`: Output video file path
 - `--crop-margin-percentage`: Percentage of margin to add around detected objects (default: 10)
 - `--num-video-sequence-samples`: Number of video frames to use for classification (default: 8)
-- `--skip-frame`: Number of frames to skip between detections (default: 1)
+- `--skip-frame`: Number of frames to skip between predn (default: 1)
 - `--video-cls-overlap-ratio`: Overlap ratio between video sequences (default: 0.25)
 - `--fp16`: Use FP16 for inference (only for HuggingFace models)
 - `--video-classifier-model`: Video classifier model name or path (default: "microsoft/xclip-base-patch32")

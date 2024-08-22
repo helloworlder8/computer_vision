@@ -484,17 +484,18 @@ class ConfusionMatrix:
         task (str): The type of task, either 'detect' or 'classify'.
         matrix (np.ndarray): The confusion matrix, with dimensions depending on the task.
         nc (int): The number of classes.
-        conf (float): The confidence threshold for detections.
-        iou_thres (float): The Intersection over Union threshold.
+        conf (float): The confidence threshold for predn.
+        confusion_matrix_iou (float): The Intersection over Union threshold.
     """
-
-    def __init__(self, nc, conf=0.25, iou_thres=0.45, task="detect"):
+    # 混淆矩阵以及精度和召回率默认iou阈值值0.45
+    def __init__(self, nc, conf=0.25, confusion_matrix_iou=0.45, task="detect"):
         """Initialize attributes for the YOLO model."""
+        self.confusion_matrix_conf = 0.25 if conf in {None, 0.001} else conf  # apply 0.25 if default val conf is passed
+        self.confusion_matrix_iou = confusion_matrix_iou #iou默认0.45
         self.task = task
-        self.matrix = np.zeros((nc + 1, nc + 1)) if self.task == "detect" else np.zeros((nc, nc))
+        self.matrix = np.zeros((nc + 1, nc + 1)) if self.task == "detect" else np.zeros((nc, nc)) #(81, 81)
         self.nc = nc  # number of classes
-        self.conf = 0.25 if conf in {None, 0.001} else conf  # apply 0.25 if default val conf is passed
-        self.iou_thres = iou_thres
+
 
     def process_cls_preds(self, preds, targets):
         """
@@ -508,63 +509,63 @@ class ConfusionMatrix:
         for p, t in zip(preds.cpu().numpy(), targets.cpu().numpy()):
             self.matrix[p][t] += 1
 
-    def process_batch(self, detections, gt_bboxes, gt_cls):
+    def process_batch(self, predn, gt_bboxes, gt_cls):
         """
         Update confusion matrix for object detection task.
 
         Args:
-            detections (Array[N, 6] | Array[N, 7]): Detected bounding boxes and their associated information.
+            predn (Array[N, 6] | Array[N, 7]): Detected bounding boxes and their associated information.
                                       Each row should contain (x1, y1, x2, y2, conf, class)
                                       or with an additional element `angle` when it's obb.
             gt_bboxes (Array[M, 4]| Array[N, 5]): Ground truth bounding boxes with xyxy/xyxyr format.
             gt_cls (Array[M]): The class labels.
         """
         if gt_cls.shape[0] == 0:  # Check if labels is empty
-            if detections is not None:
-                detections = detections[detections[:, 4] > self.conf]
-                detection_classes = detections[:, 5].int()
-                for dc in detection_classes:
+            if predn is not None:
+                predn = predn[predn[:, 4] > self.confusion_matrix_conf]
+                predn_cls_int = predn[:, 5].int()
+                for dc in predn_cls_int:
                     self.matrix[dc, self.nc] += 1  # false positives
             return
-        if detections is None:
-            gt_classes = gt_cls.int()
-            for gc in gt_classes:
+        if predn is None:
+            gt_cls_int = gt_cls.int()
+            for gc in gt_cls_int:
                 self.matrix[self.nc, gc] += 1  # background FN
             return
 
-        detections = detections[detections[:, 4] > self.conf]
-        gt_classes = gt_cls.int()
-        detection_classes = detections[:, 5].int()
-        is_obb = detections.shape[1] == 7 and gt_bboxes.shape[1] == 5  # with additional `angle` dimension
+        predn = predn[predn[:, 4] > self.confusion_matrix_conf] #置信度过滤   0.25
+        gt_cls_int = gt_cls.int()
+        predn_cls_int = predn[:, 5].int()
+        is_obb = predn.shape[1] == 7 and gt_bboxes.shape[1] == 5  # with additional `angle` dimension
         iou = (
-            batch_probiou(gt_bboxes, torch.cat([detections[:, :4], detections[:, -1:]], dim=-1))
+            batch_probiou(gt_bboxes, torch.cat([predn[:, :4], predn[:, -1:]], dim=-1))
             if is_obb
-            else box_iou(gt_bboxes, detections[:, :4])
-        )
+            else box_iou(gt_bboxes, predn[:, :4])
+        ) #torch.Size([17, 8])  这里的confusion_matrix_conf 0.25
 
-        x = torch.where(iou > self.iou_thres)
-        if x[0].shape[0]:
-            matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()
-            if x[0].shape[0] > 1:
-                matches = matches[matches[:, 2].argsort()[::-1]]
-                matches = matches[np.unique(matches[:, 1], return_index=True)[1]]
-                matches = matches[matches[:, 2].argsort()[::-1]]
-                matches = matches[np.unique(matches[:, 0], return_index=True)[1]]
+        iou_index = torch.where(iou > self.confusion_matrix_iou) #iou过滤   0.45
+        if iou_index[0].shape[0]:
+            iou_index_value = torch.cat((torch.stack(iou_index, 1), iou[iou_index[0], iou_index[1]][:, None]), 1).cpu().numpy() #
+            if iou_index[0].shape[0] > 1:
+                iou_index_value = iou_index_value[iou_index_value[:, 2].argsort()[::-1]]#置信度从大到小重排
+                iou_index_value = iou_index_value[np.unique(iou_index_value[:, 1], return_index=True)[1]] #一个真实框对应多个预测框 (8, 3)
+                iou_index_value = iou_index_value[iou_index_value[:, 2].argsort()[::-1]]
+                iou_index_value = iou_index_value[np.unique(iou_index_value[:, 0], return_index=True)[1]] # (7, 3)
         else:
-            matches = np.zeros((0, 3))
+            iou_index_value = np.zeros((0, 3))
 
-        n = matches.shape[0] > 0
-        m0, m1, _ = matches.transpose().astype(int)
-        for i, gc in enumerate(gt_classes):
-            j = m0 == i
-            if n and sum(j) == 1:
-                self.matrix[detection_classes[m1[j]], gc] += 1  # correct
+        have_match = iou_index_value.shape[0] > 0 #-》(7, 3)
+        calculate_gt_index, calculate_predn_index, _ = iou_index_value.transpose().astype(int)
+        for i, gc in enumerate(gt_cls_int):
+            TF = calculate_gt_index == i #预测是否等于真实
+            if have_match and sum(TF) == 1:
+                self.matrix[predn_cls_int[calculate_predn_index[TF]], gc] += 1  # correct
             else:
                 self.matrix[self.nc, gc] += 1  # true background
 
-        if n:
-            for i, dc in enumerate(detection_classes):
-                if not any(m1 == i):
+        if have_match:
+            for i, dc in enumerate(predn_cls_int):
+                if not any(calculate_predn_index == i):
                     self.matrix[dc, self.nc] += 1  # predicted background
 
     def matrix(self):
@@ -575,7 +576,7 @@ class ConfusionMatrix:
         """Returns true positives and false positives."""
         tp = self.matrix.diagonal()  # true positives
         fp = self.matrix.sum(1) - tp  # false positives
-        # fn = self.matrix.sum(0) - tp  # false negatives (missed detections)
+        # fn = self.matrix.sum(0) - tp  # false negatives (missed predn)
         return (tp[:-1], fp[:-1]) if self.task == "detect" else (tp, fp)  # remove background class if task=detect
 
     @TryExcept("WARNING ⚠️ ConfusionMatrix plot failure")
@@ -663,7 +664,7 @@ def plot_pr_curve(px, py, ap, save_dir=Path("pr_curve.png"), names=(), on_plot=N
         on_plot(save_dir)
 
 
-@plt_settings() #x间隔 y有用
+@plt_settings() 
 def plot_mc_curve(px, py, save_dir=Path("mc_curve.png"), names=(), xlabel="Confidence", ylabel="Metric", on_plot=None):
     """Plots a metric-confidence curve."""
     fig, ax = plt.subplots(1, 1, figsize=(9, 6), tight_layout=True)
@@ -676,7 +677,6 @@ def plot_mc_curve(px, py, save_dir=Path("mc_curve.png"), names=(), xlabel="Confi
 
     y = smooth(py.mean(0), 0.05)
     ax.plot(px, y, linewidth=3, color="blue", label=f"all classes {y.max():.2f} at {px[y.argmax()]:.3f}")
-    # ax.plot(px, y, linewidth=3, color="blue", label=f"all classes {y[100]:.2f} at {px[y.argmax()]:.3f}")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_xlim(0, 1)
@@ -723,16 +723,16 @@ def compute_ap(recall, precision):
 
 
 def ap_per_class(
-    tp, conf, pred_cls, target_cls, plot=False, on_plot=None, save_dir=Path(), names=(), eps=1e-16, prefix=""
+    tp, conf, pd_cls, gt_cls, plot=False, on_plot=None, save_dir=Path(), names=(), eps=1e-16, prefix=""
 ):
     """
     Computes the average precision per class for object detection evaluation.
 
     Args:
         tp (np.ndarray): Binary array indicating whether the detection is correct (True) or not (False).
-        conf (np.ndarray): Array of confidence scores of the detections.
-        pred_cls (np.ndarray): Array of predicted classes of the detections.
-        target_cls (np.ndarray): Array of true classes of the detections.
+        conf (np.ndarray): Array of confidence scores of the predn.
+        pd_cls (np.ndarray): Array of predicted classes of the predn.
+        gt_cls (np.ndarray): Array of true classes of the predn.
         plot (bool, optional): Whether to plot PR curves or not. Defaults to False.
         on_plot (func, optional): A callback to pass plots path and data when they are rendered. Defaults to None.
         save_dir (Path, optional): Directory to save the PR curves. Defaults to an empty path.
@@ -748,7 +748,7 @@ def ap_per_class(
             r (np.ndarray): Recall values at threshold given by max F1 metric for each class. Shape: (nc,).
             f1 (np.ndarray): F1-score values at threshold given by max F1 metric for each class. Shape: (nc,).
             ap (np.ndarray): Average precision for each class at different IoU thresholds. Shape: (nc, 10).
-            unique_classes (np.ndarray): An array of unique classes that have data. Shape: (nc,).
+            unique_gt_cls (np.ndarray): An array of unique classes that have data. Shape: (nc,).
             p_curve (np.ndarray): Precision curves for each class. Shape: (nc, 1000).
             r_curve (np.ndarray): Recall curves for each class. Shape: (nc, 1000).
             f1_curve (np.ndarray): F1-score curves for each class. Shape: (nc, 1000).
@@ -758,31 +758,31 @@ def ap_per_class(
 
     # Sort by objectness
     i = np.argsort(-conf)
-    tp, conf, pred_cls = tp[i], conf[i], pred_cls[i]
+    tp, conf, pd_cls = tp[i], conf[i], pd_cls[i] #按照置信度从大到小排序
 
     # Find unique classes
-    unique_classes, nt = np.unique(target_cls, return_counts=True)
-    nc = unique_classes.shape[0]  # number of classes, number of detections
+    unique_gt_cls, unique_gt_cls_num = np.unique(gt_cls, return_counts=True) #929个目标 71个列别，每个类别的数目
+    nc = unique_gt_cls.shape[0]  # number of classes, number of predn
 
     # Create Precision-Recall curve and compute AP for each class
     x, prec_values = np.linspace(0, 1, 1000), []
 
-    # Average precision, precision and recall curves
+    # Average precision, precision and recall curves (71, 10)类别 10档置信度   (71, 1000) 类别 1000
     ap, p_curve, r_curve = np.zeros((nc, tp.shape[1])), np.zeros((nc, 1000)), np.zeros((nc, 1000))
-    for ci, c in enumerate(unique_classes):
-        i = pred_cls == c
-        n_l = nt[ci]  # number of labels
-        n_p = i.sum()  # number of predictions
+    for ci, c in enumerate(unique_gt_cls):
+        i = pd_cls == c
+        n_l = unique_gt_cls_num[ci]  # number of labels  这一类有多少标签数
+        n_p = i.sum()  # 这一类与多少预测数
         if n_p == 0 or n_l == 0:
             continue
 
         # Accumulate FPs and TPs
         fpc = (1 - tp[i]).cumsum(0)
-        tpc = tp[i].cumsum(0)
-
+        tpc = tp[i].cumsum(0) #(3737, 10)
+        # 按照行的方向（第 0 轴）逐步累加的结果。
         # Recall
-        recall = tpc / (n_l + eps)  # recall curve
-        r_curve[ci] = np.interp(-x, -conf[i], recall[:, 0], left=0)  # negative x, xp because xp decreases
+        recall = tpc / (n_l + eps)  # recall curve #(3737, 10)
+        r_curve[ci] = np.interp(-x, -conf[i], recall[:, 0], left=0)  # negative x, xp because xp decreases   iou阈值是0.5
 
         # Precision
         precision = tpc / (tpc + fpc)  # precision curve
@@ -790,7 +790,7 @@ def ap_per_class(
 
         # AP from recall-precision curve
         for j in range(tp.shape[1]):
-            ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j])
+            ap[ci, j], mpre, mrec = compute_ap(recall[:, j], precision[:, j]) #(71, 10) 71类 每一类10个档位
             if plot and j == 0:
                 prec_values.append(np.interp(x, mrec, mpre))  # precision at mAP@0.5
 
@@ -798,7 +798,7 @@ def ap_per_class(
 
     # Compute F1 (harmonic mean of precision and recall)
     f1_curve = 2 * p_curve * r_curve / (p_curve + r_curve + eps)
-    names = [v for k, v in names.items() if k in unique_classes]  # list: only classes that have data
+    names = [v for k, v in names.items() if k in unique_gt_cls]  # list: only classes that have data
     names = dict(enumerate(names))  # to dict
     if plot:
         plot_pr_curve(x, prec_values, ap, save_dir / f"{prefix}PR_curve.png", names, on_plot=on_plot)
@@ -808,9 +808,9 @@ def ap_per_class(
 
     i = smooth(f1_curve.mean(0), 0.1).argmax()  # max F1 index
     p, r, f1 = p_curve[:, i], r_curve[:, i], f1_curve[:, i]  # max-F1 precision, recall, F1 values
-    tp = (r * nt).round()  # true positives
+    tp = (r * unique_gt_cls_num).round()  # true positives
     fp = (tp / (p + eps) - tp).round()  # false positives
-    return tp, fp, p, r, f1, ap, unique_classes.astype(int), p_curve, r_curve, f1_curve, x, prec_values
+    return tp, fp, p, r, f1, ap, unique_gt_cls.astype(int), p_curve, r_curve, f1_curve, x, prec_values
 
 
 class Metric(SimpleClass):
@@ -1005,7 +1005,7 @@ class DetMetrics(SimpleClass):
         speed (dict): A dictionary for storing the execution time of different parts of the detection process.
 
     Methods:
-        process(tp, conf, pred_cls, target_cls): Updates the metric results with the latest batch of predictions.
+        process(tp, conf, pd_cls, gt_cls): Updates the metric results with the latest batch of predictions.
         keys: Returns a list of keys for accessing the computed detection metrics.
         mean_results: Returns a list of mean values for the computed detection metrics.
         class_result(i): Returns a list of values for the computed detection metrics for a specific class.
@@ -1027,13 +1027,13 @@ class DetMetrics(SimpleClass):
         self.speed = {"preprocess": 0.0, "inference": 0.0, "loss": 0.0, "postprocess": 0.0}
         self.task = "detect"
 
-    def process(self, tp, conf, pred_cls, target_cls):
+    def process(self, tp, conf, pd_cls, gt_cls):
         """Process predicted results for object detection and update metrics."""
         results = ap_per_class(
             tp,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             save_dir=self.save_dir,
             names=self.names,
@@ -1106,7 +1106,7 @@ class SegmentMetrics(SimpleClass):
         speed (dict): Dictionary to store the time taken in different phases of inference.
 
     Methods:
-        process(tp_m, tp_b, conf, pred_cls, target_cls): Processes metrics over the given set of predictions.
+        process(tp_m, tp_b, conf, pd_cls, gt_cls): Processes metrics over the given set of predictions.
         mean_results(): Returns the mean of the detection and segmentation metrics over all the classes.
         class_result(i): Returns the detection and segmentation metrics of class `i`.
         maps: Returns the mean Average Precision (mAP) scores for IoU thresholds ranging from 0.50 to 0.95.
@@ -1126,7 +1126,7 @@ class SegmentMetrics(SimpleClass):
         self.speed = {"preprocess": 0.0, "inference": 0.0, "loss": 0.0, "postprocess": 0.0}
         self.task = "segment"
 
-    def process(self, tp, tp_m, conf, pred_cls, target_cls):
+    def process(self, tp, tp_m, conf, pd_cls, gt_cls):
         """
         Processes the detection and segmentation metrics over the given set of predictions.
 
@@ -1134,15 +1134,15 @@ class SegmentMetrics(SimpleClass):
             tp (list): List of True Positive boxes.
             tp_m (list): List of True Positive masks.
             conf (list): List of confidence scores.
-            pred_cls (list): List of predicted classes.
-            target_cls (list): List of target classes.
+            pd_cls (list): List of predicted classes.
+            gt_cls (list): List of target classes.
         """
 
         results_mask = ap_per_class(
             tp_m,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             on_plot=self.on_plot,
             save_dir=self.save_dir,
@@ -1154,8 +1154,8 @@ class SegmentMetrics(SimpleClass):
         results_box = ap_per_class(
             tp,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             on_plot=self.on_plot,
             save_dir=self.save_dir,
@@ -1247,7 +1247,7 @@ class PoseMetrics(SegmentMetrics):
         speed (dict): Dictionary to store the time taken in different phases of inference.
 
     Methods:
-        process(tp_m, tp_b, conf, pred_cls, target_cls): Processes metrics over the given set of predictions.
+        process(tp_m, tp_b, conf, pd_cls, gt_cls): Processes metrics over the given set of predictions.
         mean_results(): Returns the mean of the detection and segmentation metrics over all the classes.
         class_result(i): Returns the detection and segmentation metrics of class `i`.
         maps: Returns the mean Average Precision (mAP) scores for IoU thresholds ranging from 0.50 to 0.95.
@@ -1268,7 +1268,7 @@ class PoseMetrics(SegmentMetrics):
         self.speed = {"preprocess": 0.0, "inference": 0.0, "loss": 0.0, "postprocess": 0.0}
         self.task = "pose"
 
-    def process(self, tp, tp_p, conf, pred_cls, target_cls):
+    def process(self, tp, tp_p, conf, pd_cls, gt_cls):
         """
         Processes the detection and pose metrics over the given set of predictions.
 
@@ -1276,15 +1276,15 @@ class PoseMetrics(SegmentMetrics):
             tp (list): List of True Positive boxes.
             tp_p (list): List of True Positive keypoints.
             conf (list): List of confidence scores.
-            pred_cls (list): List of predicted classes.
-            target_cls (list): List of target classes.
+            pd_cls (list): List of predicted classes.
+            gt_cls (list): List of target classes.
         """
 
         results_pose = ap_per_class(
             tp_p,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             on_plot=self.on_plot,
             save_dir=self.save_dir,
@@ -1296,8 +1296,8 @@ class PoseMetrics(SegmentMetrics):
         results_box = ap_per_class(
             tp,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             on_plot=self.on_plot,
             save_dir=self.save_dir,
@@ -1331,7 +1331,7 @@ class PoseMetrics(SegmentMetrics):
 
     @property
     def maps(self):
-        """Returns the mean average precision (mAP) per class for both box and pose detections."""
+        """Returns the mean average precision (mAP) per class for both box and pose predn."""
         return self.box.maps + self.pose.maps
 
     @property
@@ -1425,13 +1425,13 @@ class OBBMetrics(SimpleClass):
         self.box = Metric()
         self.speed = {"preprocess": 0.0, "inference": 0.0, "loss": 0.0, "postprocess": 0.0}
 
-    def process(self, tp, conf, pred_cls, target_cls):
+    def process(self, tp, conf, pd_cls, gt_cls):
         """Process predicted results for object detection and update metrics."""
         results = ap_per_class(
             tp,
             conf,
-            pred_cls,
-            target_cls,
+            pd_cls,
+            gt_cls,
             plot=self.plot,
             save_dir=self.save_dir,
             names=self.names,

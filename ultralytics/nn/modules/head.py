@@ -68,8 +68,8 @@ class Detect(nn.Module):
             x (tensor): Input tensor.
 
         Returns:
-            (dict, tensor): If not in training mode, returns a dictionary containing the outputs of both one2many and one2one detections.
-                           If in training mode, returns a dictionary containing the outputs of one2many and one2one detections separately.
+            (dict, tensor): If not in training mode, returns a dictionary containing the outputs of both one2many and one2one predn.
+                           If in training mode, returns a dictionary containing the outputs of one2many and one2one predn separately.
         """
         x_detach = [xi.detach() for xi in x]
         one2one = [
@@ -136,7 +136,7 @@ class Detect(nn.Module):
 
         Args:
             preds (torch.Tensor): The predictions obtained from the model. It should have a shape of (batch_size, num_boxes, 4 + nc).
-            max_det (int): The maximum number of detections to keep.
+            max_det (int): The maximum number of predn to keep.
             nc (int, optional): The number of classes. Defaults to 80.
 
         Returns:
@@ -572,7 +572,7 @@ class v10Detect(Detect): #yolov10检测头
         ch (tuple): Tuple of channel sizes.
 
     Attributes:
-        max_det (int): Maximum number of detections.
+        max_det (int): Maximum number of predn.
 
     Methods:
         __init__(self, nc=80, ch=()): Initializes the v10Detect object.

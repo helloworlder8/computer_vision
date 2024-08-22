@@ -25,7 +25,7 @@ class DetectionPredictor(BasePredictor): #使用基础预测者进行初始化�
         preds = ops.non_max_suppression( #[torch.Size([5, 6])]
             preds,
             self.args.conf, #置信度
-            self.args.iou, #iou
+            self.args.NMS_IoU, #iou
             agnostic=self.args.agnostic_nms, #false
             max_det=self.args.max_det, #最大检测数目
             classes=self.args.classes,

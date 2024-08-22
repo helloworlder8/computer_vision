@@ -237,7 +237,7 @@ For more detailed instructions, refer to our [Sliced Inference guide](#sliced-in
 
 Using SAHI with Ultralytics YOLOv8 for object detection on large images offers several benefits:
 
-- **Reduced Computational Burden**: Smaller slices are faster to process and consume less memory, making it feasible to run high-quality detections on hardware with limited resources.
+- **Reduced Computational Burden**: Smaller slices are faster to process and consume less memory, making it feasible to run high-quality predn on hardware with limited resources.
 - **Maintained Detection Accuracy**: SAHI uses intelligent algorithms to merge overlapping boxes, preserving the detection quality.
 - **Enhanced Scalability**: By scaling object detection tasks across different image sizes and resolutions, SAHI becomes ideal for various applications, such as satellite imagery analysis and medical diagnostics.
 
