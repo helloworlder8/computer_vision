@@ -143,7 +143,7 @@ class Predictor(BasePredictor):
         bboxes = self.prompts.pop("bboxes", bboxes)
         points = self.prompts.pop("points", points)
         masks = self.prompts.pop("masks", masks)
-
+        labels = self.prompts.pop("labels", labels)
         if all(i is None for i in [bboxes, points, masks]):
             return self.generate(img, *args, **kwargs)
 
@@ -181,11 +181,11 @@ class Predictor(BasePredictor):
                 labels = np.ones(points.shape[0])
             labels = torch.as_tensor(labels, dtype=torch.int32, device=self.device)
             points *= r
-            # (N, 2) --> (N, 1, 2), (N, ) --> (N, 1)
-            points, labels = points[:, None, :], labels[:, None]
+            # (N, 2) --> (1, N, 2), (N, ) --> (1, N)
+            points, labels = points[None, :, :], labels[None, :]
         if bboxes is not None:
             bboxes = torch.as_tensor(bboxes, dtype=torch.float32, device=self.device) #torch.Size([6, 4])
-            bboxes = bboxes[None] if bboxes.ndim == 1 else bboxes
+            bboxes = bboxes[None] if bboxes.ndim == 1 else bboxes #torch.Size([1, 4])
             bboxes *= r
         if masks is not None:
             masks = torch.as_tensor(masks, dtype=torch.float32, device=self.device).unsqueeze(1)
@@ -193,12 +193,14 @@ class Predictor(BasePredictor):
         points = (points, labels) if points is not None else None
         # Embed prompts
         sparse_embeddings, dense_embeddings = self.model.prompt_encoder(points=points, boxes=bboxes, masks=masks)
-
-        # Predict masks
-        pd_masks, pd_scores = self.model.mask_decoder(
+        # image_embeddings: torch.Tensor,
+        # image_pe: torch.Tensor,
+        # sparse_prompt_embeddings: torch.Tensor,
+        # dense_prompt_embeddings: torch.Tensor,
+        pd_masks, pd_scores = self.model.mask_decoder( #torch.Size([2, 1, 256, 256]) torch.Size([2, 1])
             image_embeddings=features,
-            positional_embeddings=self.model.prompt_encoder.get_positional_embeddings(),
-            points_boxes_embeddings=sparse_embeddings,
+            image_pe=self.model.prompt_encoder.get_dense_pe(),
+            sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=multimask_output,
         )
@@ -364,7 +366,7 @@ class Predictor(BasePredictor):
             (list): List of Results objects containing detection masks, bounding boxes, and other metadata.
         """
         # (N, 1, H, W), (N, 1)
-        pd_masks, pd_scores = preds[:2]
+        pd_masks, pd_scores = preds[:2] #torch.Size([3, 256, 256])  torch.Size([3])
         pd_bboxes = preds[2] if self.segment_all else None
         names = dict(enumerate(str(i) for i in range(len(pd_masks))))
 
@@ -379,7 +381,7 @@ class Predictor(BasePredictor):
                 cls = torch.arange(len(pd_masks), dtype=torch.int32, device=pd_masks.device)
                 pd_bboxes = torch.cat([pd_bboxes, pd_scores[:, None], cls[:, None]], dim=-1)
 
-            masks = ops.scale_masks(masks[None].float(), orig_img.shape[:2], padding=False)[0] #torch.Size([6, 1080, 810])
+            masks = ops.scale_masks(masks[None].float(), orig_img.shape[:2], padding=False)[0] #torch.Size([3，640，640])
             masks = masks > self.model.mask_threshold  # to bool
             img_path = self.batch[0][i]
             results.append(Results(orig_img, path=img_path, names=names, masks=masks, boxes=pd_bboxes))
@@ -582,42 +584,42 @@ class SAM2Predictor(Predictor):
             # (N, 2) --> (N, 1, 2), (N, ) --> (N, 1)
             points, labels = points[:, None], labels[:, None]
         if bboxes is not None:
-            bboxes = torch.as_tensor(bboxes, dtype=torch.float32, device=self.device)
+            bboxes = torch.as_tensor(bboxes, dtype=torch.float32, device=self.device) #torch.Size([3, 4])
             bboxes = bboxes[None] if bboxes.ndim == 1 else bboxes
-            bboxes = bboxes.view(-1, 2, 2) * r
-            bbox_labels = torch.tensor([[2, 3]], dtype=torch.int32, device=bboxes.device).expand(len(bboxes), -1)
+            bboxes = bboxes.view(-1, 2, 2) * r #torch.Size([1, 2, 2]) 批 xy xy
+            bbox_labels = torch.tensor([[2, 3]], dtype=torch.int32, device=bboxes.device).expand(len(bboxes), -1) #torch.Size([3, 2])
             # NOTE: merge "boxes" and "points" into a single "points" input
             # (where boxes are added at the beginning) to model.sam_prompt_encoder
             if points is not None:
                 points = torch.cat([bboxes, points], dim=1)
                 labels = torch.cat([bbox_labels, labels], dim=1)
             else:
-                points, labels = bboxes, bbox_labels
+                points, labels = bboxes, bbox_labels #torch.Size([3, 2, 2])  torch.Size([3, 2])值是2 3
         if masks is not None:
             masks = torch.as_tensor(masks, dtype=torch.float32, device=self.device).unsqueeze(1)
 
         points = (points, labels) if points is not None else None
 
-        sparse_embeddings, dense_embeddings = self.model.sam_prompt_encoder(
-            points=points,
+        sparse_embeddings, dense_embeddings = self.model.sam_prompt_encoder( #torch.Size([1, 3, 256]) torch.Size([1, 256, 64, 64])
+            points=points, #(torch.Size([3, 2, 2]), torch.Size([3, 2]))
             boxes=None,
             masks=masks,
         )
         # Predict masks
-        batched_mode = points is not None and points[0].shape[0] > 1  # multi object prediction
-        high_res_features = [feat_level[img_idx].unsqueeze(0) for feat_level in features["high_res_feats"]]
+        repeat_image = points is not None and points[0].shape[0] > 1  # multi object prediction
+        high_res_features = [feat_level[img_idx].unsqueeze(0) for feat_level in features["high_res_features"]]
         pred_masks, pred_scores, _, _ = self.model.sam_mask_decoder(
             image_embeddings=features["image_embed"][img_idx].unsqueeze(0),
             image_pe=self.model.sam_prompt_encoder.get_dense_pe(),
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=multimask_output,
-            repeat_image=batched_mode,
+            repeat_image=repeat_image,
             high_res_features=high_res_features,
         )
         # (N, d, H, W) --> (N*d, H, W), (N, d) --> (N*d, )
         # `d` could be 1 or 3 depends on `multimask_output`.
-        return pred_masks.flatten(0, 1), pred_scores.flatten(0, 1)
+        return pred_masks.flatten(0, 1), pred_scores.flatten(0, 1) #torch.Size([3, 256, 256]) torch.Size([3])
 
     def set_image(self, image):
         """
@@ -660,5 +662,5 @@ class SAM2Predictor(Predictor):
         feats = [
             feat.permute(1, 2, 0).view(1, -1, *feat_size)
             for feat, feat_size in zip(vision_feats[::-1], self._bb_feat_sizes[::-1])
-        ][::-1]
-        return {"image_embed": feats[-1], "high_res_feats": feats[:-1]}
+        ][::-1] 
+        return {"image_embed": feats[-1], "high_res_features": feats[:-1]}

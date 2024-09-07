@@ -79,7 +79,7 @@ if __name__ == '__main__':
 # 远程删除
 # git push origin --delete 24-07-31
 # 本地删除
-# git branch -d 24-07-31
+# git branch -d 24-08-25
 
 # 手动推送
 # git init
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 # git branch
 # git add -A
 # git commit -m "24-08-22-ALSS-weight"
-# git push -u origin 24-08-22-ALSS-weight
+# git push -u origin 24-08-25
 # git config --global --unset http.proxy
 # git config --global --unset https.proxy
 #helloworlder8

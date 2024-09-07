@@ -84,20 +84,60 @@ class YOLODataset(BaseDataset):
                 "'kpt_shape' in data_dict.yaml missing or incorrect. Should be a list with [number of "
                 "keypoints, number of dims (2 for x,y or 3 for x,y,visible)], i.e. 'kpt_shape: [17, 3]'"
             )
-        with ThreadPool(NUM_THREADS) as pool:
-            results = pool.imap(
-                func=verify_image_label,
-                iterable=zip(
-                    self.im_files,
-                    self.label_files,
-                    repeat(self.prefix),
-                    repeat(self.use_keypoints),
-                    repeat(len(self.data_dict["names"])),
-                    repeat(nkpt),
-                    repeat(ndim),
-                ),
+        if False:
+            with ThreadPool(NUM_THREADS) as pool:
+                results = pool.imap(
+                    func=verify_image_label,
+                    iterable=zip(
+                        self.im_files,
+                        self.label_files,
+                        repeat(self.prefix),
+                        repeat(self.use_keypoints),
+                        repeat(len(self.data_dict["names"])),
+                        repeat(nkpt),
+                        repeat(ndim),
+                    ),
+                )
+                pbar = TQDM(results, desc=desc, total=total)
+                for im_file, lb, shape, segments, keypoint, nm_f, nf_f, ne_f, nc_f, msg in pbar:
+                    nm += nm_f
+                    nf += nf_f
+                    ne += ne_f
+                    nc += nc_f
+                    if im_file:
+                        x["labels"].append(
+                            {
+                                "im_file": im_file,
+                                "shape": shape,
+                                "cls": lb[:, 0:1],  # n, 1
+                                "bboxes": lb[:, 1:],  # n, 4
+                                "segments": segments,
+                                "keypoints": keypoint,
+                                "normalized": True,
+                                "bbox_format": "xywh",
+                            }
+                        )
+                    if msg:
+                        msgs.append(msg)
+                    pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
+                pbar.close()
+
+        else:
+            # Prepare parameters for verification
+            params = zip(
+                self.im_files,
+                self.label_files,
+                repeat(self.prefix),
+                repeat(self.use_keypoints),
+                repeat(len(self.data_dict["names"])),
+                repeat(nkpt),
+                repeat(ndim)
             )
+
+            # Initialize results and progress bar
+            results = (verify_image_label(param) for param in params)
             pbar = TQDM(results, desc=desc, total=total)
+
             for im_file, lb, shape, segments, keypoint, nm_f, nf_f, ne_f, nc_f, msg in pbar:
                 nm += nm_f
                 nf += nf_f
@@ -120,6 +160,8 @@ class YOLODataset(BaseDataset):
                     msgs.append(msg)
                 pbar.desc = f"{desc} {nf} images, {nm + ne} backgrounds, {nc} corrupt"
             pbar.close()
+
+
 
         if msgs:
             LOGGER.info("\n".join(msgs))

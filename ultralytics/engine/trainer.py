@@ -142,7 +142,7 @@ class BaseTrainer:
             unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(self.args.model_name))  # 例如 yolov8x.yaml -> yolov8.yaml
             
             # 查找匹配的文件
-            model_name = glob.glob(str(ROOT/"cfg"/ "**" /unified_path), recursive=True) or glob.glob(str(ROOT.parent / unified_path))
+            model_name = glob.glob(str(ROOT/ "**" /unified_path), recursive=True) or glob.glob(str(ROOT.parent / unified_path))
             
             if model_name:  # 确保找到模型文件
                 shutil.copy(model_name[0], self.save_dir)  # 复制模型文件到指定目录

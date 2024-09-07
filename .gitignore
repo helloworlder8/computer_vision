@@ -1,7 +1,8 @@
 # Byte-compiled / optimized / DLL files
 # 排除 Recycle Bin 文件夹
 Recycle_Bin/
-
+ADE20K_detect/
+ADE20K_detect_1_epochs/
 # 排除 runs 文件夹
 runs/
 

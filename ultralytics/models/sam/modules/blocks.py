@@ -551,13 +551,13 @@ class MultiScaleAttention(nn.Module):
         self.qkv = nn.Linear(dim, dim_out * 3)
         self.proj = nn.Linear(dim_out, dim_out)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor: #torch.Size([1024, 8, 8, 96])
         """Applies multi-scale attention with optional query pooling to extract multi-scale features."""
-        B, H, W, _ = x.shape
+        B, H, W, _ = x.shape #1024 8 8
         # qkv with shape (B, H * W, 3, nHead, C)
-        qkv = self.qkv(x).reshape(B, H * W, 3, self.num_heads, -1)
+        qkv = self.qkv(x).reshape(B, H * W, 3, self.num_heads, -1) #torch.Size([1024, 64, 3, 1, 96])
         # q, k, v with shape (B, H * W, nheads, C)
-        q, k, v = torch.unbind(qkv, 2)
+        q, k, v = torch.unbind(qkv, 2) #torch.Size([1024, 64, 1, 96])
 
         # Q pooling (for downsample at stage changes)
         if self.q_pool:
@@ -566,16 +566,16 @@ class MultiScaleAttention(nn.Module):
             q = q.reshape(B, H * W, self.num_heads, -1)
 
         # Torch's SDPA expects [B, nheads, H*W, C] so we transpose
-        x = F.scaled_dot_product_attention(
-            q.transpose(1, 2),
+        x = F.scaled_dot_product_attention(  #->#torch.Size([1024, 1, 64, 96])
+            q.transpose(1, 2), ##torch.Size([1024, 1, 64, 96]) 批 头（宽高）维
             k.transpose(1, 2),
             v.transpose(1, 2),
         )
         # Transpose back
-        x = x.transpose(1, 2)
+        x = x.transpose(1, 2) #torch.Size([1024, 64, 1, 96])
         x = x.reshape(B, H, W, -1)
 
-        x = self.proj(x)
+        x = self.proj(x)#torch.Size([1024, 8, 8, 96])  批 宽 高 维
 
         return x
 
@@ -661,8 +661,8 @@ class MultiScaleBlock(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Processes input through multi-scale attention and MLP, with optional windowing and downsampling."""
-        shortcut = x  # B, H, W, C
-        x = self.norm1(x)
+        shortcut = x  # B, H, W, C  torch.Size([1, 256, 256, 96])
+        x = self.norm1(x) #层归一化
 
         # Skip connection
         if self.dim != self.dim_out:
@@ -672,7 +672,7 @@ class MultiScaleBlock(nn.Module):
         window_size = self.window_size
         if window_size > 0:
             H, W = x.shape[1], x.shape[2]
-            x, pad_hw = window_partition(x, window_size)
+            x, pad_hw = window_partition(x, window_size) #torch.Size([1, 256, 256, 96]) 8 -》#torch.Size([1024, 8, 8, 96]) 256
 
         # Window Attention + Q Pooling (if stage change)
         x = self.attn(x)
@@ -686,10 +686,10 @@ class MultiScaleBlock(nn.Module):
             pad_hw = (H + pad_h, W + pad_w)
 
         # Reverse window partition
-        if self.window_size > 0:
-            x = window_unpartition(x, window_size, pad_hw, (H, W))
+        if self.window_size > 0:   #256是1024/4
+            x = window_unpartition(x, window_size, pad_hw, (H, W)) #torch.Size([1024, 8, 8, 96]) 8 256 256
 
-        x = shortcut + self.drop_path(x)
+        x = shortcut + self.drop_path(x) #-》torch.Size([1, 256, 256, 96]) 批 宽 高 维
         # MLP
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
@@ -779,35 +779,35 @@ class PositionEmbeddingSine(nn.Module):
         return pos
 
     @torch.no_grad()
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor): #torch.Size([1, 256, 32, 32])
         """Generates sinusoidal position embeddings for 2D inputs like images."""
         cache_key = (x.shape[-2], x.shape[-1])
         if cache_key in self.cache:
             return self.cache[cache_key][None].repeat(x.shape[0], 1, 1, 1)
-        y_embed = (
+        y_embed = ( #torch.Size([1, 32, 32])
             torch.arange(1, x.shape[-2] + 1, dtype=torch.float32, device=x.device)
             .view(1, -1, 1)
             .repeat(x.shape[0], 1, x.shape[-1])
         )
-        x_embed = (
+        x_embed = ( #torch.Size([1, 32, 32])
             torch.arange(1, x.shape[-1] + 1, dtype=torch.float32, device=x.device)
             .view(1, 1, -1)
             .repeat(x.shape[0], x.shape[-2], 1)
         )
 
-        if self.normalize:
+        if self.normalize: #归一化
             eps = 1e-6
             y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
 
-        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device)
+        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device) #torch.Size([128])
         dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
 
-        pos_x = x_embed[:, :, :, None] / dim_t
-        pos_y = y_embed[:, :, :, None] / dim_t
-        pos_x = torch.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(3)
-        pos_y = torch.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(3)
-        pos = torch.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
+        pos_x = x_embed[:, :, :, None] / dim_t #torch.Size([1, 32, 32, 128])
+        pos_y = y_embed[:, :, :, None] / dim_t #torch.Size([1, 32, 32, 128])
+        pos_x = torch.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(3) #torch.Size([1, 32, 32, 128])
+        pos_y = torch.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(3) #torch.Size([1, 32, 32, 128])
+        pos = torch.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2) #torch.Size([1, 256, 32, 32])
         self.cache[cache_key] = pos[0]
         return pos
 
@@ -1123,9 +1123,9 @@ class PatchEmbed(nn.Module):
             torch.Size([1, 768, 14, 14])
         """
         super().__init__()
-
+        # Conv2d(3, 96, kernel_size=(7, 7), stride=(4, 4), padding=(3, 3))
         self.proj = nn.Conv2d(in_chans, embed_dim, kernel_size=kernel_size, stride=stride, padding=padding)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Computes patch embedding by applying convolution and transposing resulting tensor."""
-        return self.proj(x).permute(0, 2, 3, 1)  # B C H W -> B H W C
+        return self.proj(x).permute(0, 2, 3, 1)  # B C H W -> B H W C  torch.Size([1, 96, 256, 256])->torch.Size([1, 256, 256, 96])

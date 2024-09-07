@@ -274,12 +274,12 @@ class PromptEncoder(nn.Module):
         """Embeds point prompts by applying positional encoding and label-specific embeddings."""
         points = points + 0.5  # Shift to center of pixel
         if pad:
-            padding_point = torch.zeros((points.shape[0], 1, 2), device=points.device)
-            padding_label = -torch.ones((labels.shape[0], 1), device=labels.device)
-            points = torch.cat([points, padding_point], dim=1)
-            labels = torch.cat([labels, padding_label], dim=1)
-        point_embedding = self.pe_layer.forward_with_coords(points, self.input_image_size)
-        point_embedding[labels == -1] = 0.0
+            padding_point = torch.zeros((points.shape[0], 1, 2), device=points.device) #torch.Size([3, 1, 2])
+            padding_label = -torch.ones((labels.shape[0], 1), device=labels.device) #torch.Size([3, 1])
+            points = torch.cat([points, padding_point], dim=1) #torch.Size([3, 3, 2])
+            labels = torch.cat([labels, padding_label], dim=1) #torch.Size([3, 3])
+        point_embedding = self.pe_layer.forward_with_coords(points, self.input_image_size) #torch.Size([3, 3, 256])
+        point_embedding[labels == -1] = 0.0 #23-1
         point_embedding[labels == -1] += self.not_a_point_embed.weight
         point_embedding[labels == 0] += self.point_embeddings[0].weight
         point_embedding[labels == 1] += self.point_embeddings[1].weight
@@ -351,11 +351,11 @@ class PromptEncoder(nn.Module):
             torch.Size([1, 7, 256]) torch.Size([1, 256, 64, 64])
         """
         bs = self._get_batch_size(points, boxes, masks)
-        sparse_embeddings = torch.empty((bs, 0, self.embed_dim), device=self._get_device())
+        sparse_embeddings = torch.empty((bs, 0, self.embed_dim), device=self._get_device()) #torch.Size([3,0, 256])
         if points is not None:
             coords, labels = points
             point_embeddings = self._embed_points(coords, labels, pad=(boxes is None))
-            sparse_embeddings = torch.cat([sparse_embeddings, point_embeddings], dim=1)
+            sparse_embeddings = torch.cat([sparse_embeddings, point_embeddings], dim=1) #torch.Size([3, 3, 256])
         if boxes is not None:
             box_embeddings = self._embed_boxes(boxes)
             sparse_embeddings = torch.cat([sparse_embeddings, box_embeddings], dim=1)
@@ -365,8 +365,8 @@ class PromptEncoder(nn.Module):
         else:
             dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
                 bs, -1, self.image_embedding_size[0], self.image_embedding_size[1]
-            )
-
+            ) #torch.Size([3, 256, 64, 64])
+            # torch.Size([3, 3, 256])  torch.Size([3, 256, 64, 64])
         return sparse_embeddings, dense_embeddings
 
 
@@ -435,7 +435,7 @@ class MemoryEncoder(nn.Module):
 
         pos = self.position_encoding(x).to(x.dtype)
 
-        return {"vision_features": x, "vision_pos_enc": [pos]}
+        return {"vision_features": x, "vision_pos_embeds": [pos]}
 
 
 class ImageEncoder(nn.Module):
@@ -460,7 +460,7 @@ class ImageEncoder(nn.Module):
         >>> image = torch.randn(1, 3, 224, 224)
         >>> output = encoder(image)
         >>> print(output.keys())
-        dict_keys(['vision_features', 'vision_pos_enc', 'backbone_fpn'])
+        dict_keys(['vision_features', 'vision_pos_embeds', 'backbone_fpn'])
     """
 
     def __init__(
@@ -478,18 +478,18 @@ class ImageEncoder(nn.Module):
             self.trunk.channel_list == self.neck.backbone_channel_list
         ), f"Channel dims of trunk {self.trunk.channel_list} and neck {self.neck.backbone_channel_list} do not match."
 
-    def forward(self, sample: torch.Tensor):
+    def forward(self, batch: torch.Tensor):
         """Encodes input through patch embedding, positional embedding, transformer blocks, and neck module."""
-        features, pos = self.neck(self.trunk(sample))
+        features, pos = self.neck(self.trunk(batch))
         if self.scalp > 0:
             # Discard the lowest resolution features
             features, pos = features[: -self.scalp], pos[: -self.scalp]
 
         src = features[-1]
         output = {
-            "vision_features": src,
-            "vision_pos_enc": pos,
-            "backbone_fpn": features,
+            "vision_features": src, #原始编码倒数第二层
+            "vision_pos_embeds": pos,  #位置编码去最后一层
+            "backbone_fpn": features, #原始特征去最后一层
         }
         return output
 
@@ -585,7 +585,7 @@ class FpnNeck(nn.Module):
         self.fpn_top_down_levels = list(fpn_top_down_levels)
 
     def forward(self, xs: List[torch.Tensor]):
-        """
+        """ #torch.Size([1, 96, 256, 256]) torch.Size([1, 192, 128, 128]) torch.Size([1, 384, 64, 64]) torch.Size([1, 768, 32, 32])
         Performs forward pass through the Feature Pyramid Network (FPN) neck.
 
         This method processes a list of input tensors from the backbone through the FPN, applying lateral connections
@@ -616,10 +616,10 @@ class FpnNeck(nn.Module):
         # forward in top-down order (from low to high resolution)
         n = len(self.convs) - 1
         for i in range(n, -1, -1):
-            x = xs[i]
-            lateral_features = self.convs[n - i](x)
+            x = xs[i] #torch.Size([1, 768, 32, 32])
+            lateral_features = self.convs[n - i](x) #torch.Size([1, 256, 32, 32])
             if i in self.fpn_top_down_levels and prev_features is not None:
-                top_down_features = F.interpolate(
+                top_down_features = F.interpolate( #上采样
                     prev_features.to(dtype=torch.float32),
                     scale_factor=2.0,
                     mode=self.fpn_interp_model,
@@ -631,7 +631,7 @@ class FpnNeck(nn.Module):
                     prev_features /= 2
             else:
                 prev_features = lateral_features
-            x_out = prev_features
+            x_out = prev_features #torch.Size([1, 256, 32, 32])
             out[i] = x_out
             pos[i] = self.position_encoding(x_out).to(x_out.dtype)
 
@@ -766,25 +766,28 @@ class Hiera(nn.Module):
     def _get_pos_embed(self, hw: Tuple[int, int]) -> torch.Tensor:
         """Generates positional embeddings by interpolating and combining window and background embeddings."""
         h, w = hw
-        window_embed = self.pos_embed_window
-        pos_embed = F.interpolate(self.pos_embed, size=(h, w), mode="bicubic")
+        window_embed = self.pos_embed_window #torch.Size([1, 96, 8, 8])
+        pos_embed = F.interpolate(self.pos_embed, size=(h, w), mode="bicubic") #torch.Size([1, 96, 256, 256])
         pos_embed = pos_embed + window_embed.tile([x // y for x, y in zip(pos_embed.shape, window_embed.shape)])
         pos_embed = pos_embed.permute(0, 2, 3, 1)
         return pos_embed
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         """Performs forward pass through Hiera model, extracting multiscale features from input images."""
-        x = self.patch_embed(x)
+        x = self.patch_embed(x) #torch.Size([1, 3, 1024, 1024]) -》torch.Size([1, 256, 256, 96])
         # x: (B, H, W, C)
 
         # Add pos embed
-        x = x + self._get_pos_embed(x.shape[1:3])
+        x = x + self._get_pos_embed(x.shape[1:3]) #-》torch.Size([1, 256, 256, 96]) 批 点点 维
 
         outputs = []
         for i, blk in enumerate(self.blocks):
-            x = blk(x)
-            if (i == self.stage_ends[-1]) or (i in self.stage_ends and self.return_interm_layers):
-                feats = x.permute(0, 3, 1, 2)
+            x = blk(x) #-》torch.Size([1, 256, 256, 96]) torch.Size([1, 128, 128, 192])
+            if (i == self.stage_ends[-1]) or (i in self.stage_ends and self.return_interm_layers): #需要中间层信息（作为多尺度融合）
+                feats = x.permute(0, 3, 1, 2) #批 维 宽 高
                 outputs.append(feats)
 
         return outputs
+# torch.Size([1, 128, 128, 192]) torch.Size([1, 64, 64, 384]) torch.Size([1, 64, 64, 384]) torch.Size([1, 64, 64, 384])
+# torch.Size([1, 64, 64, 384]) torch.Size([1, 64, 64, 384]) torch.Size([1, 64, 64, 384]) torch.Size([1, 64, 64, 384])
+# torch.Size([1, 32, 32, 768]) torch.Size([1, 32, 32, 768])

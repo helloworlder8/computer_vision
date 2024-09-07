@@ -100,9 +100,9 @@ class TwoWayTransformer(nn.Module):
 
     def forward(
         self,
-        image_embedding: Tensor,
-        image_pe: Tensor,
-        point_embedding: Tensor,
+        image_embedding: Tensor, #torch.Size([3, 256, 64, 64])
+        image_pe: Tensor, #torch.Size([3, 256, 64, 64])
+        point_embedding: Tensor, #torch.Size([3, 9, 256])
     ) -> Tuple[Tensor, Tensor]:
         """
         Processes image and point embeddings through the Two-Way Transformer.
@@ -124,8 +124,8 @@ class TwoWayTransformer(nn.Module):
             >>> print(output_queries.shape, output_image.shape)
         """
         # BxCxHxW -> BxHWxC == B x N_image_tokens x C
-        image_embedding = image_embedding.flatten(2).permute(0, 2, 1)
-        image_pe = image_pe.flatten(2).permute(0, 2, 1)
+        image_embedding = image_embedding.flatten(2).permute(0, 2, 1) #torch.Size([3, 4096, 256])
+        image_pe = image_pe.flatten(2).permute(0, 2, 1) #torch.Size([3, 4096, 256])
 
         # Prepare queries
         queries = point_embedding
@@ -133,17 +133,17 @@ class TwoWayTransformer(nn.Module):
 
         # Apply transformer blocks and final layernorm
         for layer in self.layers:
-            queries, keys = layer(
-                queries=queries,
-                keys=keys,
-                query_pe=point_embedding,
-                key_pe=image_pe,
+            queries, keys = layer( #torch.Size([1, 9, 256]) #torch.Size([1, 4096, 256])
+                queries=queries, #提示
+                keys=keys, #图像
+                query_pe=point_embedding, #提示
+                key_pe=image_pe, #位置
             )
 
         # Apply the final attention layer from the points to the image
         q = queries + point_embedding
         k = keys + image_pe
-        attn_out = self.final_attn_token_to_image(q=q, k=k, v=keys)
+        attn_out = self.final_attn_token_to_image(q=q, k=k, v=keys) #torch.Size([1, 9, 256])
         queries = queries + attn_out
         queries = self.norm_final_attn(queries)
 
@@ -232,7 +232,7 @@ class TwoWayAttentionBlock(nn.Module):
 
     def forward(self, queries: Tensor, keys: Tensor, query_pe: Tensor, key_pe: Tensor) -> Tuple[Tensor, Tensor]:
         """Applies two-way attention to process query and key embeddings in a transformer block."""
-
+#提示 图像 提示 位置
         # Self attention block
         if self.skip_first_layer_pe:
             queries = self.self_attn(q=queries, k=queries, v=queries)
@@ -243,9 +243,9 @@ class TwoWayAttentionBlock(nn.Module):
         queries = self.norm1(queries)
 
         # Cross attention block, tokens attending to image embedding
-        q = queries + query_pe
+        q = queries + query_pe #提示自注意力加提示
         k = keys + key_pe
-        attn_out = self.cross_attn_token_to_image(q=q, k=k, v=keys)
+        attn_out = self.cross_attn_token_to_image(q=q, k=k, v=keys) #提（有位置编码） 图（有位置编码） 图
         queries = queries + attn_out
         queries = self.norm2(queries)
 

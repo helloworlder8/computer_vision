@@ -65,7 +65,95 @@ class Colors:
 
 colors = Colors()
 
-def annotated_image(image_folder, label_folder, output_folder, class_labels, class_colors_bgr):
+# Sample class labels (You should replace these with your actual class labels)
+class_labels = {
+    0: 'person',
+    1: 'bicycle',
+    2: 'car',
+    3: 'motorcycle',
+    4: 'airplane',
+    5: 'bus',
+    6: 'train',
+    7: 'truck',
+    8: 'boat',
+    9: 'traffic light',
+    10: 'fire hydrant',
+    11: 'stop sign',
+    12: 'parking meter',
+    13: 'bench',
+    14: 'bird',
+    15: 'cat',
+    16: 'dog',
+    17: 'horse',
+    18: 'sheep',
+    19: 'cow',
+    20: 'elephant',
+    21: 'bear',
+    22: 'zebra',
+    23: 'giraffe',
+    24: 'backpack',
+    25: 'umbrella',
+    26: 'handbag',
+    27: 'tie',
+    28: 'suitcase',
+    29: 'frisbee',
+    30: 'skis',
+    31: 'snowboard',
+    32: 'sports ball',
+    33: 'kite',
+    34: 'baseball bat',
+    35: 'baseball glove',
+    36: 'skateboard',
+    37: 'surfboard',
+    38: 'tennis racket',
+    39: 'bottle',
+    40: 'wine glass',
+    41: 'cup',
+    42: 'fork',
+    43: 'knife',
+    44: 'spoon',
+    45: 'bowl',
+    46: 'banana',
+    47: 'apple',
+    48: 'sandwich',
+    49: 'orange',
+    50: 'broccoli',
+    51: 'carrot',
+    52: 'hot dog',
+    53: 'pizza',
+    54: 'donut',
+    55: 'cake',
+    56: 'chair',
+    57: 'couch',
+    58: 'potted plant',
+    59: 'bed',
+    60: 'dining table',
+    61: 'toilet',
+    62: 'tv',
+    63: 'laptop',
+    64: 'mouse',
+    65: 'remote',
+    66: 'keyboard',
+    67: 'cell phone',
+    68: 'microwave',
+    69: 'oven',
+    70: 'toaster',
+    71: 'sink',
+    72: 'refrigerator',
+    73: 'book',
+    74: 'clock',
+    75: 'vase',
+    76: 'scissors',
+    77: 'teddy bear',
+    78: 'hair drier',
+    79: 'toothbrush'
+}
+
+
+# Sample class colors (You can use Colors class or define your own)
+class_colors_bgr = {i: colors(i, bgr=True) for i in class_labels.keys()}
+
+def annotated_image_segmentation(image_folder, label_folder, output_folder, class_labels, class_colors_bgr):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -90,23 +178,21 @@ def annotated_image(image_folder, label_folder, output_folder, class_labels, cla
             values = line.split()
             
             class_id = int(values[0])
-            center_x = float(values[1]) * image_width
-            center_y = float(values[2]) * image_height
-            width = float(values[3]) * image_width
-            height = float(values[4]) * image_height
+            points = np.array([float(v) for v in values[1:]]).reshape(-1, 2)
+            points[:, 0] *= image_width
+            points[:, 1] *= image_height
+            points = points.astype(np.int32)
 
-            top_left_x = int(center_x - width / 2)
-            top_left_y = int(center_y - height / 2)
-            bottom_right_x = int(center_x + width / 2)
-            bottom_right_y = int(center_y + height / 2)
-
-            bbox_color = class_colors_bgr.get(class_id, (0, 0, 0))
+            polygon_color = class_colors_bgr.get(class_id, (0, 0, 0))
 
             label = class_labels.get(class_id, 'unknown')
 
-            cv2.rectangle(image, (top_left_x, top_left_y), (bottom_right_x, bottom_right_y), bbox_color, 2)
+            cv2.polylines(image, [points], isClosed=True, color=polygon_color, thickness=2)
             
-            cv2.putText(image, label, (top_left_x, top_left_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, bbox_color, 2)
+            centroid_x = int(np.mean(points[:, 0]))
+            centroid_y = int(np.mean(points[:, 1]))
+
+            cv2.putText(image, label, (centroid_x, centroid_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, polygon_color, 2)
 
         output_image_path = os.path.join(output_folder, base_name + '_annotated.jpg')
         cv2.imwrite(output_image_path, image)
@@ -114,19 +200,8 @@ def annotated_image(image_folder, label_folder, output_folder, class_labels, cla
         print(f'Annotated image saved as {output_image_path}')
 
 if __name__ == "__main__":
-    image_folder = 'Javeri-det-seg/train_detect/images/'
-    label_folder = 'Javeri-det-seg/train_detect/labels/'
-    output_folder = 'valid_detect'
+    image_folder = 'coco_yolo/valid/images/'
+    label_folder = 'coco_yolo/valid/labels/'
+    output_folder = 'valid_segment'
 
-    class_labels = {0: 'human', 1: 'elephant', 2: 'giraffe', 3: 'unknown'}
-    class_colors = {
-        0: (255, 58, 56),    # human
-        1: (253, 159, 150),  # elephant
-        2: (254, 112, 35),   # giraffe
-        3: (252, 173, 60)    # unknown
-
-    }
-
-    class_colors_bgr = {k: (v[2], v[1], v[0]) for k, v in class_colors.items()}
-    
-    annotated_image(image_folder, label_folder, output_folder, class_labels, class_colors_bgr)
+    annotated_image_segmentation(image_folder, label_folder, output_folder, class_labels, class_colors_bgr)

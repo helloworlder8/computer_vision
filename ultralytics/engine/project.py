@@ -548,19 +548,20 @@ class BaseProject(nn.Module):
 
 
     def _combine_args(self, kwargs):
-        """Initialize overrides from the configuration."""
-        self.overrides = yaml_load(checks.check_yaml(kwargs["cfg"])) if kwargs.get("cfg") else self.overrides #图单
-        """Initialize custom arguments."""
+        # Load overrides from the configuration file if 'cfg' is provided, otherwise use existing overrides
+        self.overrides = yaml_load(checks.check_yaml(kwargs["cfg"])) if kwargs.get("cfg") else self.overrides
+        # Initialize custom arguments, filling missing values from overrides or defaults
         self.custom = {
             "data": kwargs.get("data") or self.overrides.get("data") or DEFAULT_CFG_DICT["data"] or TASK2DATA[self.task],
             "model_name": self.overrides["model_name"],
             "task": self.task,
-        } #强调重申
-        """Combine arguments with the highest priority ones on the right."""
+        }
+        # Combine all arguments with the highest priority ones on the right (custom, kwargs, overrides)
         self.args = {**self.overrides, **self.custom, **kwargs, "mode": "train"}
-        """Set the resume parameter if applicable."""
+
+        # Set the 'resume_pt' parameter if 'resume' is specified in the arguments
         if self.args.get("resume"):
-            self.args["resume_pt"] = self.ckpt_path #你这伏笔埋的
+            self.args["resume_pt"] = self.ckpt_path
 
     def _initialize_trainer(self, kwargs):
         """Initialize the trainer."""

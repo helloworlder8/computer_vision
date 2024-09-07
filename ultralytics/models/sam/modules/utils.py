@@ -142,7 +142,7 @@ def window_partition(x, window_size):
         >>> print(windows.shape, Hp, Wp)
         torch.Size([16, 4, 4, 3]) 16 16
     """
-    B, H, W, C = x.shape
+    B, H, W, C = x.shape #torch.Size([1, 256, 256, 96])
 
     pad_h = (window_size - H % window_size) % window_size
     pad_w = (window_size - W % window_size) % window_size
@@ -150,9 +150,9 @@ def window_partition(x, window_size):
         x = F.pad(x, (0, 0, 0, pad_w, 0, pad_h))
     Hp, Wp = H + pad_h, W + pad_w
 
-    x = x.view(B, Hp // window_size, window_size, Wp // window_size, window_size, C)
-    windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
-    return windows, (Hp, Wp)
+    x = x.view(B, Hp // window_size, window_size, Wp // window_size, window_size, C) #torch.Size([1, 32, 8, 32, 8, 96])
+    windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)#torch.Size([1024, 8, 8, 96]) 1024块 每块8x8 96通道
+    return windows, (Hp, Wp)#torch.Size([1024, 8, 8, 96])  256 256
 
 
 def window_unpartition(windows, window_size, pad_hw, hw):
@@ -185,8 +185,8 @@ def window_unpartition(windows, window_size, pad_hw, hw):
     Hp, Wp = pad_hw
     H, W = hw
     B = windows.shape[0] // (Hp * Wp // window_size // window_size)
-    x = windows.view(B, Hp // window_size, Wp // window_size, window_size, window_size, -1)
-    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, Hp, Wp, -1)
+    x = windows.view(B, Hp // window_size, Wp // window_size, window_size, window_size, -1) #torch.Size([1, 32, 32, 8, 8, 96])
+    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, Hp, Wp, -1) #torch.Size([1, 256, 256, 96]) 批 宽 高 维
 
     if Hp > H or Wp > W:
         x = x[:, :H, :W, :].contiguous()

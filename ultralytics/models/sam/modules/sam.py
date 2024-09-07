@@ -587,23 +587,23 @@ class SAM2Model(torch.nn.Module):
             # to avoid running it again on every SAM click
             backbone_out["backbone_fpn"][0] = self.sam_mask_decoder.conv_s0(backbone_out["backbone_fpn"][0])
             backbone_out["backbone_fpn"][1] = self.sam_mask_decoder.conv_s1(backbone_out["backbone_fpn"][1])
-        return backbone_out
+        return backbone_out #torch.Size([1, 32, 256, 256])  torch.Size([1, 64, 128, 128]) torch.Size([1, 256, 64, 64])
 
     def _prepare_backbone_features(self, backbone_out):
         """Prepares and flattens visual features from the image backbone output for further processing."""
         backbone_out = backbone_out.copy()
-        assert len(backbone_out["backbone_fpn"]) == len(backbone_out["vision_pos_enc"])
+        assert len(backbone_out["backbone_fpn"]) == len(backbone_out["vision_pos_embeds"])
         assert len(backbone_out["backbone_fpn"]) >= self.num_feature_levels
 
         feature_maps = backbone_out["backbone_fpn"][-self.num_feature_levels :]
-        vision_pos_embeds = backbone_out["vision_pos_enc"][-self.num_feature_levels :]
+        vision_pos_embeds = backbone_out["vision_pos_embeds"][-self.num_feature_levels :]
 
         feat_sizes = [(x.shape[-2], x.shape[-1]) for x in vision_pos_embeds]
-        # flatten NxCxHxW to HWxNxC
+        # flatten NxCxHxW to HWxNxC  宽高 批 维
         vision_feats = [x.flatten(2).permute(2, 0, 1) for x in feature_maps]
         vision_pos_embeds = [x.flatten(2).permute(2, 0, 1) for x in vision_pos_embeds]
-
-        return backbone_out, vision_feats, vision_pos_embeds, feat_sizes
+# torch.Size([65536, 1, 32]) torch.Size([16384, 1, 64]) torch.Size([4096, 1, 256])
+        return backbone_out, vision_feats, vision_pos_embeds, feat_sizes #[(256, 256), (128, 128), (64, 64)]
 
     def _prepare_memory_conditioned_features(
         self,
@@ -806,7 +806,7 @@ class SAM2Model(torch.nn.Module):
             skip_mask_sigmoid=True,  # sigmoid already applied
         )
         maskmem_features = maskmem_out["vision_features"]
-        maskmem_pos_enc = maskmem_out["vision_pos_enc"]
+        maskmem_pos_enc = maskmem_out["vision_pos_embeds"]
 
         return maskmem_features, maskmem_pos_enc
 

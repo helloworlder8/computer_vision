@@ -8,7 +8,7 @@ from scripts.utile.send_notice import send_notice_by_task
 if __name__ == '__main__':
     model = YOLO(model=model_yaml6,task=task)
 
-    metrics = model.train(data=data,
+    metrics = model.train(data=data6,
                 cache=False,
                 imgsz=640,
                 # close_mosaic=10,

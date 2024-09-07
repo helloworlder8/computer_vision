@@ -20,40 +20,40 @@ from .modules.tiny_encoder import TinyViT
 from .modules.transformer import TwoWayTransformer
 
 
-def build_sam_vit_h(checkpoint=None):
+def build_sam_vit_h(model_name=None):
     """Builds and returns a Segment Anything Model (SAM) h-size model with specified encoder parameters."""
     return _build_sam(
         encoder_embed_dim=1280,
         encoder_depth=32,
         encoder_num_heads=16,
         encoder_global_attn_indexes=[7, 15, 23, 31],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam_vit_l(checkpoint=None):
+def build_sam_vit_l(model_name=None):
     """Builds and returns a Segment Anything Model (SAM) l-size model with specified encoder parameters."""
     return _build_sam(
         encoder_embed_dim=1024,
         encoder_depth=24,
         encoder_num_heads=16,
         encoder_global_attn_indexes=[5, 11, 17, 23],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam_vit_b(checkpoint=None):
-    """Constructs and returns a Segment Anything Model (SAM) with b-size architecture and optional checkpoint."""
+def build_sam_vit_b(model_name=None):
+    """Constructs and returns a Segment Anything Model (SAM) with b-size architecture and optional model_name."""
     return _build_sam(
         encoder_embed_dim=768,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_mobile_sam(checkpoint=None):
+def build_mobile_sam(model_name=None):
     """Builds and returns a Mobile Segment Anything Model (Mobile-SAM) for efficient image segmentation."""
     return _build_sam(
         encoder_embed_dim=[64, 128, 160, 320],
@@ -61,11 +61,11 @@ def build_mobile_sam(checkpoint=None):
         encoder_num_heads=[2, 4, 5, 10],
         encoder_global_attn_indexes=None,
         mobile_sam=True,
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam2_t(checkpoint=None):
+def build_sam2_t(model_name=None):
     """Builds and returns a Segment Anything Model 2 (SAM2) tiny-size model with specified architecture parameters."""
     return _build_sam2(
         encoder_embed_dim=96,
@@ -74,11 +74,11 @@ def build_sam2_t(checkpoint=None):
         encoder_global_att_blocks=[5, 7, 9],
         encoder_window_spec=[8, 4, 14, 7],
         encoder_backbone_channel_list=[768, 384, 192, 96],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam2_s(checkpoint=None):
+def build_sam2_s(model_name=None):
     """Builds and returns a small-size Segment Anything Model (SAM2) with specified architecture parameters."""
     return _build_sam2(
         encoder_embed_dim=96,
@@ -87,11 +87,11 @@ def build_sam2_s(checkpoint=None):
         encoder_global_att_blocks=[7, 10, 13],
         encoder_window_spec=[8, 4, 14, 7],
         encoder_backbone_channel_list=[768, 384, 192, 96],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam2_b(checkpoint=None):
+def build_sam2_b(model_name=None):
     """Builds and returns a SAM2 base-size model with specified architecture parameters."""
     return _build_sam2(
         encoder_embed_dim=112,
@@ -101,11 +101,11 @@ def build_sam2_b(checkpoint=None):
         encoder_window_spec=[8, 4, 14, 7],
         encoder_window_spatial_size=[14, 14],
         encoder_backbone_channel_list=[896, 448, 224, 112],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
-def build_sam2_l(checkpoint=None):
+def build_sam2_l(model_name=None):
     """Builds and returns a large-size Segment Anything Model (SAM2) with specified architecture parameters."""
     return _build_sam2(
         encoder_embed_dim=144,
@@ -114,7 +114,7 @@ def build_sam2_l(checkpoint=None):
         encoder_global_att_blocks=[23, 33, 43],
         encoder_window_spec=[8, 4, 16, 8],
         encoder_backbone_channel_list=[1152, 576, 288, 144],
-        checkpoint=checkpoint,
+        model_name=model_name,
     )
 
 
@@ -123,7 +123,7 @@ def _build_sam(
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
-    checkpoint=None,
+    model_name=None,
     mobile_sam=False,
 ):
     """
@@ -134,7 +134,7 @@ def _build_sam(
         encoder_depth (int | List[int]): Depth of the encoder.
         encoder_num_heads (int | List[int]): Number of attention heads in the encoder.
         encoder_global_attn_indexes (List[int] | None): Indexes for global attention in the encoder.
-        checkpoint (str | None): Path to the model checkpoint file.
+        model_name (str | None): Path to the model model_name file.
         mobile_sam (bool): Whether to build a Mobile-SAM model.
 
     Returns:
@@ -204,13 +204,13 @@ def _build_sam(
         pixel_mean=[123.675, 116.28, 103.53],
         pixel_std=[58.395, 57.12, 57.375],
     )
-    if checkpoint is not None:
-        checkpoint = attempt_download_asset(checkpoint)
-        with open(checkpoint, "rb") as f:
+    if model_name is not None:
+        model_name = attempt_download_asset(model_name)
+        with open(model_name, "rb") as f:
             state_dict = torch.load(f)
         sam.load_state_dict(state_dict)
     sam.eval()
-    # sam.load_state_dict(torch.load(checkpoint), strict=True)
+    # sam.load_state_dict(torch.load(model_name), strict=True)
     # sam.eval()
     return sam
 
@@ -223,7 +223,7 @@ def _build_sam2(
     encoder_backbone_channel_list=[1152, 576, 288, 144],
     encoder_window_spatial_size=[7, 7],
     encoder_window_spec=[8, 4, 16, 8],
-    checkpoint=None,
+    model_name=None,
 ):
     """
     Builds and returns a Segment Anything Model 2 (SAM2) with specified architecture parameters.
@@ -236,7 +236,7 @@ def _build_sam2(
         encoder_backbone_channel_list (List[int]): Channel dimensions for each level of the encoder backbone.
         encoder_window_spatial_size (List[int]): Spatial size of the window for position embeddings.
         encoder_window_spec (List[int]): Window specifications for each stage of the encoder.
-        checkpoint (str | None): Path to the checkpoint file for loading pre-trained weights.
+        model_name (str | None): Path to the model_name file for loading pre-trained weights.
 
     Returns:
         (SAM2Model): A configured and initialized SAM2 model.
@@ -297,9 +297,9 @@ def _build_sam2(
         ),
     )
 
-    if checkpoint is not None:
-        checkpoint = attempt_download_asset(checkpoint)
-        with open(checkpoint, "rb") as f:
+    if model_name is not None:
+        model_name = attempt_download_asset(model_name)
+        with open(model_name, "rb") as f:
             state_dict = torch.load(f)["model"]
         sam2.load_state_dict(state_dict)
     sam2.eval()
