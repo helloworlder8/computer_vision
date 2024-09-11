@@ -14,7 +14,7 @@ from PIL import Image
 
 from tests import CFG, IS_TMP_WRITEABLE, MODEL, SOURCE, TMP
 from ultralytics import RTDETR, YOLO
-from ultralytics.cfg import MODELS, TASK2DATA, TASKS
+from ultralytics.cfg_yaml import MODELS, TASK2DATA, TASKS
 from ultralytics.data.build import load_inference_source
 from ultralytics.utils import (
     ASSETS,
@@ -320,7 +320,7 @@ def test_events():
 
 def test_cfg_init():
     """Test configuration initialization utilities from the 'ultralytics.cfg' module."""
-    from ultralytics.cfg import check_dict_alignment, copy_default_cfg, smart_value
+    from ultralytics.cfg_yaml import check_dict_alignment, copy_default_cfg, smart_value
 
     with contextlib.suppress(SyntaxError):
         check_dict_alignment({"a": 1}, {"b": 2})

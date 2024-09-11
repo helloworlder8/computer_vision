@@ -579,7 +579,7 @@ def merge_multi_segment(segments):
     return s
 
 # im_dir可以传分割或者检测图像路径
-def yolo_bbox2segment(im_dir, save_dir=None, sam_model="sam_b.pt",expansion=1.2):
+def yolo_bbox2segment(im_dir, save_dir=None, sam_model="sam_b.pt",expansion=1):
     """
     Converts existing object detection dataset (bounding boxes) to segmentation dataset or oriented bounding box (OBB)
     in YOLO format. Generates segmentation data using SAM auto-annotator as needed.

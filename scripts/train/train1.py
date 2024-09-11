@@ -14,7 +14,7 @@ if __name__ == '__main__':
                 # close_mosaic=10,
                 # workers=4,
                 # optimizer='SGD', # using SGD
-                IoU=IoU,
+                IoU=IoU1,
                 val_interval=val_interval,
                 resume=resume, # last.pt path
                 # amp=False # close amp
@@ -37,3 +37,4 @@ if __name__ == '__main__':
 
 
 
+# Model summary: 251 layers, 1,577,473 parameters, 1,577,457 gradients, 8.2 GFLOPs

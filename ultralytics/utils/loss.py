@@ -8,9 +8,93 @@ from ultralytics.utils.metrics import OKS_SIGMA
 from ultralytics.utils.ops import crop_mask, xywh2xyxy, xyxy2xywh
 from ultralytics.utils.tal import RotatedTaskAlignedAssigner, TaskAlignedAssigner, dist2bbox, dist2rbox, make_anchors
 
-from .metrics import bbox_iou, probiou
+from .metrics import bbox_iou, probiou, bbox_mpdiou, bbox_inner_iou, bbox_inner_mpdiou, wasserstein_loss, WiseIouLoss
 from .tal import bbox2dist
 
+import math
+ 
+ 
+class SlideLoss(nn.Module):
+    def __init__(self, loss_fcn):
+        super(SlideLoss, self).__init__()
+        self.loss_fcn = loss_fcn
+        self.reduction = loss_fcn.reduction
+        self.loss_fcn.reduction = 'none'  # required to apply SL to each element
+
+    def forward(self, pred, true, auto_iou=0.5):
+        loss = self.loss_fcn(pred, true)
+        if auto_iou < 0.2:
+            auto_iou = 0.2
+        b1 = true <= auto_iou - 0.1
+        a1 = 1.0
+        b2 = (true > (auto_iou - 0.1)) & (true < auto_iou)
+        a2 = math.exp(1.0 - auto_iou)
+        b3 = true >= auto_iou
+        a3 = torch.exp(-(true - 1.0))
+        modulating_weight = a1 * b1 + a2 * b2 + a3 * b3
+        loss *= modulating_weight
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        else:  # 'none'
+            return loss
+
+class EMASlideLoss:
+    def __init__(self, loss_fcn, decay=0.999, tau=2000):
+        super(EMASlideLoss, self).__init__()
+        self.loss_fcn = loss_fcn
+        self.reduction = loss_fcn.reduction
+        self.loss_fcn.reduction = 'none'  # required to apply SL to each element
+        self.decay = lambda x: decay * (1 - math.exp(-x / tau))
+        self.is_train = True
+        self.updates = 0
+        self.iou_mean = 1.0
+    
+    def __call__(self, pred, true, auto_iou=0.5):
+        if self.is_train and auto_iou != -1:
+            self.updates += 1
+            d = self.decay(self.updates)
+            self.iou_mean = d * self.iou_mean + (1 - d) * float(auto_iou.detach())
+        auto_iou = self.iou_mean
+        loss = self.loss_fcn(pred, true)
+        if auto_iou < 0.2:
+            auto_iou = 0.2
+        b1 = true <= auto_iou - 0.1
+        a1 = 1.0
+        b2 = (true > (auto_iou - 0.1)) & (true < auto_iou)
+        a2 = math.exp(1.0 - auto_iou)
+        b3 = true >= auto_iou
+        a3 = torch.exp(-(true - 1.0))
+        modulating_weight = a1 * b1 + a2 * b2 + a3 * b3
+        loss *= modulating_weight
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        else:  # 'none'
+            return loss
+
+
+
+class QualityfocalLoss(nn.Module):
+    def __init__(self, beta=2.0):
+        super().__init__()
+        self.beta = beta
+    
+    def forward(self, pred_score, gt_score, gt_target_pos_mask):
+        # negatives are supervised by 0 quality score
+        pred_sigmoid = pred_score.sigmoid()
+        scale_factor = pred_sigmoid
+        zerolabel = scale_factor.new_zeros(pred_score.shape)
+        with torch.cuda.amp.autocast(enabled=False):
+            loss = F.binary_cross_entropy_with_logits(pred_score, zerolabel, reduction='none') * scale_factor.pow(self.beta)
+        
+        scale_factor = gt_score[gt_target_pos_mask] - pred_sigmoid[gt_target_pos_mask]
+        with torch.cuda.amp.autocast(enabled=False):
+            loss[gt_target_pos_mask] = F.binary_cross_entropy_with_logits(pred_score[gt_target_pos_mask], gt_score[gt_target_pos_mask], reduction='none') * scale_factor.abs().pow(self.beta)
+        return loss
+    
 
 class VarifocalLoss(nn.Module):
     """
@@ -35,6 +119,14 @@ class VarifocalLoss(nn.Module):
             )
         return loss
 
+
+def dice_loss(pred, target, smooth=1e-5):
+    # pred = torch.sigmoid(pred)
+    intersection = (pred * target)
+    union = pred + target
+    dice_score = (2 * intersection + smooth) / (union + smooth)
+    loss = 1 - dice_score
+    return loss  # 返回与输入形状相同的损失
 
 class FocalLoss(nn.Module):
     """Wraps focal loss around existing loss_fcn(), i.e. criteria = FocalLoss(nn.BCEWithLogitsLoss(), gamma=1.5)."""
@@ -96,7 +188,13 @@ class BboxLoss(nn.Module):
         self.dfl_loss = DFLoss(reg_max) if reg_max > 1 else None
         self.IoU_algorithm = IoU_algorithm
 
-    def forward(self, pd_dist, pd_bboxes_pyramid, anc_points, target_scores, target_bboxes_pyramid, target_scores_sum, foreground_mask):
+
+        self.use_wiseiou = True
+        self.nwd_loss = False
+        self.wiou_loss = WiseIouLoss(ltype='WIoU', monotonous=False, inner_iou=False)
+        self.iou_ratio = 0.5
+
+    def forward(self, pd_dist, pd_bboxes_pyramid, anc_points, target_scores, target_bboxes_pyramid, target_scores_sum, foreground_mask, mpdiou_hw=None):
         """IoU loss."""
         weight = target_scores.sum(-1)[foreground_mask].unsqueeze(-1)
 
@@ -113,9 +211,21 @@ class BboxLoss(nn.Module):
             IoU_options[self.IoU_algorithm] = True
         else:
             raise ValueError(f"Unsupported IOU algorithm: {self.IoU_algorithm}")   
-        
-        iou = bbox_iou(pd_bboxes_pyramid[foreground_mask], target_bboxes_pyramid[foreground_mask], xywh=False, CIoU=True)
-        loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+        # torch.Size([2, 8400, 4]) torch.Size([2, 8400])   torch.Size([2, 8400, 4]) torch.Size([2, 8400])
+        # iou = bbox_iou(pd_bboxes_pyramid[foreground_mask], target_bboxes_pyramid[foreground_mask], xywh=False,  **IoU_options)
+        iou = bbox_iou(pd_bboxes_pyramid[foreground_mask], target_bboxes_pyramid[foreground_mask], xywh=False, **IoU_options)
+        if type(iou) is tuple:
+            if len(iou) == 2:
+                loss_iou = ((1.0 - iou[0]) * iou[1].detach() * weight).sum() / target_scores_sum
+            else:
+                loss_iou = (iou[0] * iou[1] * weight).sum() / target_scores_sum
+        else:
+            loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+                
+        if self.nwd_loss:
+            nwd = wasserstein_loss(pd_bboxes_pyramid[foreground_mask], target_bboxes_pyramid[foreground_mask])
+            nwd_loss = ((1.0 - nwd) * weight).sum() / target_scores_sum
+            loss_iou = self.iou_ratio * loss_iou +  (1 - self.iou_ratio) * nwd_loss
 
         # DFL loss
         if self.dfl_loss:
@@ -178,7 +288,12 @@ class DetectionLoss:
         h = model.args  # hyperparameters
 
         m = model.seqential_model[-1]  # Detect() module
-        self.bce = nn.BCEWithLogitsLoss(reduction="none")
+        self.bce = nn.BCEWithLogitsLoss(reduction='none')
+        # self.bce = EMASlideLoss(nn.BCEWithLogitsLoss(reduction='none'))  # Exponential Moving Average Slide Loss
+        # self.bce = SlideLoss(nn.BCEWithLogitsLoss(reduction='none')) # Slide Loss
+        # self.bce = FocalLoss(alpha=0.25, gamma=1.5) # FocalLoss
+        # self.bce = VarifocalLoss(alpha=0.75, gamma=2.0) # VarifocalLoss
+        # self.bce = QualityfocalLoss(beta=2.0) # QualityfocalLoss
         self.hyp = h
         self.stride = m.stride  # model strides
         self.nc = m.nc  # number of classes
@@ -191,14 +306,14 @@ class DetectionLoss:
         self.assigner = TaskAlignedAssigner(topk=tal_topk, nc=self.nc, alpha=0.5, beta=6.0, IoU_algorithm=model.args.IoU)
         self.bbox_loss = BboxLoss(m.reg_max, model.args.IoU).to(device)
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
-
+    # torch.Size([21, 6])  2   torch.Size([4])
     def preprocess(self, targets, batch_size, scale_tensor): #金字塔到计算机图像域  xywh-》xyxy
         """Preprocesses the target counts and matches with the input batch size to output a tensor."""
         num_bboxes, ne = targets.shape
         if num_bboxes == 0:
             gt_targets = torch.zeros(batch_size, 0, ne - 1, device=self.device)
         else:
-            batch_idx = targets[:, 0]  # image index
+            batch_idx = targets[:, 0]  # image index  torch.Size([2]) torch.Size([2])
             _, counts = batch_idx.unique(return_counts=True) #{Tensor:(21,)} tensor([0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.], device='cuda:0')  {Tensor:(2,)} tensor([ 8, 13], device='cuda:0', dtype=torch.int32)
             counts = counts.to(dtype=torch.int32)
             gt_targets = torch.zeros(batch_size, counts.max(), ne - 1, device=self.device) #t 2 13 5
@@ -262,7 +377,7 @@ class DetectionLoss:
         if foreground_mask.sum():
             target_bboxes /= stride_tensor
             loss[0], loss[2] = self.bbox_loss(
-                pd_distri, pd_bboxes_pyramid, anc_points, target_scores, target_bboxes, target_scores_sum, foreground_mask
+                pd_distri, pd_bboxes_pyramid, anc_points, target_scores, target_bboxes, target_scores_sum, foreground_mask, ((imgsz[0] ** 2 + imgsz[1] ** 2) / torch.square(stride_tensor)).repeat(1, batch_size).transpose(1, 0)
             )
 
         loss[0] *= self.hyp.box  # box gain
@@ -271,6 +386,11 @@ class DetectionLoss:
 
         return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
 
+def combined_loss(pred, target, alpha=0.5):
+    bce_loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")  # 保持与输入相同形状
+    dice_loss_value = dice_loss(pred, target)
+    combined_loss = alpha * bce_loss + (1 - alpha) * dice_loss_value
+    return combined_loss  # 返回与输入形状相同的损失
 
 class SegmentationLoss(DetectionLoss):
     """Criterion class for computing training avg_loss_items."""
@@ -285,7 +405,7 @@ class SegmentationLoss(DetectionLoss):
         feats, pd_masks, proto = self.unpack_preds(preds) #[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]  torch.Size([2, 32, 8400])  torch.Size([2, 32, 160, 160])
         # feats充满了妥协
         pd_distri, pd_scores, pd_masks = self.prepare_predictions(feats, pd_masks) # ->批 点 维
-        
+        # torch.Size([2, 8400, 64]) torch.Size([2, 8400, 80]) torch.Size([2, 8400, 32])
         dtype = pd_scores.dtype
         imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]
         batch_size, _, mask_h, mask_w = proto.shape # 2 160 160
@@ -305,11 +425,26 @@ class SegmentationLoss(DetectionLoss):
         )
         
         target_scores_sum = max(target_scores.sum(), 1)
-        # 分类得分
+        # 分类损失  torch.Size([2, 8400, 80]) torch.Size([2, 8400, 80])
         loss[2] = self.bce(pd_scores, target_scores.to(dtype)).sum() / target_scores_sum
         
-        if foreground_mask.sum():
-            loss[0], loss[3] = self.calculate_bbox_loss(pd_distri, pd_bboxes_pyramid, anc_points, target_scores,  target_bboxes, stride_tensor, target_scores_sum, foreground_mask) #loss_iou, loss_dfl
+        if foreground_mask.sum(): #bbox损失 dfl损失
+            # loss[0], loss[3] = self.calculate_bbox_loss(pd_distri, pd_bboxes_pyramid, anc_points, target_scores,  target_bboxes, stride_tensor, target_scores_sum, foreground_mask) #loss_iou, loss_dfl
+            
+            loss[0], loss[3] = self.bbox_loss(pd_distri, pd_bboxes_pyramid, anc_points, target_scores,target_bboxes / stride_tensor,
+                                              target_scores_sum,foreground_mask, ((imgsz[0] ** 2 + imgsz[1] ** 2) / torch.square(stride_tensor)).repeat(1, batch_size).transpose(1, 0))
+
+        # return self.bbox_loss(
+        #     pd_distri, #torch.Size([2, 8400, 64])
+        #     pd_bboxes_pyramid, #torch.Size([2, 8400, 4])
+        #     anc_points, #torch.Size([8400, 2])
+        #     target_scores, #torch.Size([2, 8400, 80])
+        #     target_bboxes / stride_tensor, #torch.Size([2, 8400, 4])
+            
+        #     target_scores_sum,
+        #     foreground_mask,
+        # )
+
             gt_masks = self.prepare_masks(batch, mask_h, mask_w) #torch.Size([2, 160, 160])
             loss[1] = self.calculate_segmentation_loss(gt_masks, #分割损失
                                                        target_bboxes,
@@ -352,7 +487,7 @@ class SegmentationLoss(DetectionLoss):
             gt_targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]]) #计算机图像域框xyxy
             gt_labels, gt_bboxes = gt_targets.split((1, 4), 2)  #handled_targets是原始图像xyxy并且 批 框 维
             gt_mask = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
-            return gt_labels, gt_bboxes, gt_mask
+            return gt_labels, gt_bboxes, gt_mask #torch.Size([2, 13, 1]) torch.Size([2, 13, 4]) torch.Size([2, 13, 1])
         except RuntimeError as e:
             raise TypeError(
                 "ERROR ❌ segment dataset incorrectly formatted or not a segment dataset.\n"
@@ -409,8 +544,15 @@ class SegmentationLoss(DetectionLoss):
             predicted masks from the prototype masks and predicted mask coefficients.
         """ #40个类别都有掩膜 32维度信息
         pred_mask = torch.einsum("in,nhw->ihw", pred, proto)  # (n, 32) @ (32, 80, 80) -> (n, 80, 80)
+        # loss = self.tversky_loss(pred_mask, gt_mask)
         loss = F.binary_cross_entropy_with_logits(pred_mask, gt_mask, reduction="none")
+        # loss = combined_loss(pred_mask, gt_mask)
         return (crop_mask(loss, xyxy).mean(dim=(1, 2)) / area).sum()
+
+
+
+
+
 
     def calculate_segmentation_loss(
         self,
@@ -438,13 +580,13 @@ class SegmentationLoss(DetectionLoss):
         # Normalize to mask size
         mxyxy = normalized_target_bboxes * torch.tensor([mask_w, mask_h, mask_w, mask_h], device=proto.device)
         # Areas of target bboxes
-        marea = xyxy2xywh(normalized_target_bboxes)[..., 2:].prod(2) #-》torch.Size([2, 8400, 4]) torch.Size([2, 8400, 4]) 整个目标框的面积   浅拷贝
+        marea = xyxy2xywh(normalized_target_bboxes)[..., 2:].prod(2) #-》torch.Size([2, 8400, 4]) -》torch.Size([2, 8400]) 整个目标框的面积   浅拷贝
 
 
         # torch.Size([160, 160]) torch.Size([8400])torch.Size([8400])torch.Size([8400, 32])torch.Size([32, 160, 160])torch.Size([8400, 4]) torch.Size([8400])
         for i, (gt_masks_i,foreground_mask_index_i,foreground_mask_i,pd_masks_i,proto_i,mxyxy_i,marea_i)in enumerate(
                 zip(gt_masks, foreground_mask_index, foreground_mask, pd_masks, proto, mxyxy, marea )):
-            if foreground_mask_i.any():
+            if foreground_mask_i.any(): #如果是是哪个前景点  是不是前景点
                 mask_idx = foreground_mask_index_i[foreground_mask_i] #torch.Size([8400])-》torch.Size([40])
                 if overlap:
                     gt_class_mask = gt_masks_i == (mask_idx + 1).view(-1, 1, 1) #-》torch.Size([40, 160, 160])

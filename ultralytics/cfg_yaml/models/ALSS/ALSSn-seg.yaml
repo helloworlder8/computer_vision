@@ -9,8 +9,8 @@ scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call 
   # [depth, width, max_channels]
   # n: [1, 1, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   n: [0.33, 0.167, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
-  n: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
-  n: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  s: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  m: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   l: [1.00, 1.00, 512] # YOLOv8l summary: 365 layers, 43691520 parameters, 43691504 gradients, 165.7 GFLOPs
   x: [1.00, 1.25, 512] # YOLOv8x summary: 365 layers, 68229648 parameters, 68229632 gradients, 258.5 GFLOPs
 
@@ -51,4 +51,4 @@ head:
 
 
   # - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)               24
-  - [[15, 19, 23], 1, Segment, [nc, 32, 256]] # Detect(P3, P4, P5) 
+  - [[15, 19, 23], 1, Segment, [nc, 32, 256,16]] # Detect(P3, P4, P5) 

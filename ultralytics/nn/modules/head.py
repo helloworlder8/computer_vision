@@ -29,12 +29,15 @@ class Detect(nn.Module):#检测头
     anchors = torch.empty(0)  # init
     strides = torch.empty(0)  # init
 
-    def __init__(self, nc=80, ch=()): #[256, 512, 1024]
+    def __init__(self, nc=80,reg_max=16, ch=()): #[256, 512, 1024]
         """Initializes the YOLOv8 detection layer with specified number of classes and channels."""
+        if isinstance(reg_max, list) and len(reg_max) > 0:
+            ch = reg_max
+            reg_max = 16
         super().__init__()
         self.nc = nc  # number of classes
         self.nl = len(ch)  # number of detection layers
-        self.reg_max = 16  # DFL channels (ch[0] // 16 to scale 4/8/12/16/20 for n/s/m/l/x)
+        self.reg_max = reg_max  # DFL channels (ch[0] // 16 to scale 4/8/12/16/20 for n/s/m/l/x)
         self.no = nc + self.reg_max * 4  # number of outputs per anchor
         self.stride = torch.zeros(self.nl)  # strides computed during build
         c2, c3 = max((16, ch[0] // 4, self.reg_max * 4)), max(ch[0], min(self.nc, 100))  # 两个中间通道
@@ -166,26 +169,30 @@ class Detect(nn.Module):#检测头
 class Segment(Detect):
     """YOLOv8 Segment head for segmentation models."""
 
-    def __init__(self, nc=80, nm=32, npr=256, ch=()): #[80, 32, 256, [256, 512, 1024]]
+    def __init__(self, nc=80, nm=32, npr=256,reg_max = 16, ch=()): #[80, 32, 256, [256, 512, 1024]]
         """Initialize the YOLO model attributes such as the number of masks, prototypes, and the convolution layers."""
-        super().__init__(nc, ch)
+        if isinstance(reg_max, list) and len(reg_max) > 0:
+            ch = reg_max
+            reg_max = 16
+        super().__init__(nc,reg_max,ch) #最后才加输入通道信息
         self.nm = nm  # number of masks
         self.npr = npr  # number of protos #直接理解成中间层
-        self.proto = Proto(ch[0], self.npr, self.nm)  # protos
+        self.proto = Proto(ch[0], self.npr, self.nm)  # 输入 中间 输出掩膜数
 
         c4 = max(ch[0] // 4, self.nm) #值等于第一个层通道除以4 中间输出通道    self.nm最后输出通道
         self.cv4 = nn.ModuleList(nn.Sequential(Conv(x, c4, 3), Conv(c4, c4, 3), nn.Conv2d(c4, self.nm, 1)) for x in ch)
 
     def forward(self, x): #[torch.Size([2, 64, 80, 80]), torch.Size([2, 128, 40, 40]), torch.Size([2, 256, 20, 20])]
         """Return model outputs and mask coefficients if training, otherwise return outputs and mask coefficients."""
-        p = self.proto(x[0])  # mask protos  卷积 上采样 卷积 卷积 -》torch.Size([2, 32, 160, 160])
-        bs = p.shape[0]  # batch size  2     80x80 40x40 20x20
+        proto = self.proto(x[0])  # mask protos  卷积 上采样 卷积 卷积 -》torch.Size([2, 32, 160, 160])
+        bs = proto.shape[0]  # batch size  2     80x80 40x40 20x20
         # [torch.Size([2, 256, 80, 80]), torch.Size([2, 512, 40, 40]), torch.Size([2, 1024, 20, 20])]
-        mc = torch.cat([self.cv4[i](x[i]).view(bs, self.nm, -1) for i in range(self.nl)], 2)  #torch.Size([2, 32, 8400]) 统一起来
+        pd_masks = torch.cat([self.cv4[i](x[i]).view(bs, self.nm, -1) for i in range(self.nl)], 2)  #torch.Size([2, 32, 8400]) 统一起来
         x = Detect.forward(self, x) 
         if self.training:
-            return x, mc, p #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
-        return (torch.cat([x, mc], 1), p) if self.export else (torch.cat([x[0], mc], 1), (x[1], mc, p))
+            # feats, pd_masks, proto
+            return x, pd_masks, proto #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
+        return (torch.cat([x, pd_masks], 1), proto) if self.export else (torch.cat([x[0], pd_masks], 1), (x[1], pd_masks, proto))
         # 框 类别置信度 32维度    点                                                1 32 21504     1 32 256 256
 
 class OBB(Detect):

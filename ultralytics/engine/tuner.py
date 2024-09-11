@@ -25,7 +25,7 @@ import time
 import numpy as np
 import torch
 
-from ultralytics.cfg import get_args, get_save_dir
+from ultralytics.cfg_yaml import get_args, get_save_dir
 from ultralytics.utils import DEFAULT_CFG, LOGGER, callbacks, colorstr, remove_colorstr, yaml_print, yaml_save
 from ultralytics.utils.plotting import plot_tune_results
 

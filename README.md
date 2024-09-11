@@ -64,6 +64,9 @@
 
 
 
+## 分割头
+`elif m in {Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}`
+
 ## 画图
 ```python
         plot_pr_curve(x, prec_values, ap, save_dir / f"{prefix}PR_curve.png", names, on_plot=on_plot)

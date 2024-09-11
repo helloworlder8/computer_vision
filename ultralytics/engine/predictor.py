@@ -38,7 +38,7 @@ import cv2
 import numpy as np
 import torch
 
-from ultralytics.cfg import get_args, get_save_dir
+from ultralytics.cfg_yaml import get_args, get_save_dir
 from ultralytics.data import load_inference_source
 from ultralytics.data.augment import LetterBox, classify_transforms
 from ultralytics.nn.autobackend import AutoBackend

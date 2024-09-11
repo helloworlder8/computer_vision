@@ -10,14 +10,14 @@ def send_notice(content):
 def send_notice_by_task(metrics,task):
     if task == "detect":
         
-        send_notice(f"Precision(B): {metrics.results_dict['metrics/mAP50(B)']}, "
-            f"Recall(B): {metrics.results_dict['metrics/mAP50-95(B)']}, "
+        send_notice(f"metrics/mAP50(B): {metrics.results_dict['metrics/mAP50(B)']}, "
+            f"metrics/mAP50-95(B): {metrics.results_dict['metrics/mAP50-95(B)']}, "
             # f"mAP50(B): {metrics.results_dict['metrics/mAP50(M)']}, "
             # f"mAP50-95(B): {metrics.results_dict['metrics/mAP50-95(M)']}, "
             f"Fitness: {metrics.results_dict['fitness']}")
     elif task == "segment":
-        send_notice(f"Precision(B): {metrics.results_dict['metrics/mAP50(B)']}, "
-            f"Recall(B): {metrics.results_dict['metrics/mAP50-95(B)']}, "
-            f"mAP50(B): {metrics.results_dict['metrics/mAP50(M)']}, "
-            f"mAP50-95(B): {metrics.results_dict['metrics/mAP50-95(M)']}, "
+        send_notice(f"metrics/mAP50(B): {metrics.results_dict['metrics/mAP50(B)']}, "
+            f"metrics/mAP50-95(B): {metrics.results_dict['metrics/mAP50-95(B)']}, "
+            f"metrics/mAP50(M): {metrics.results_dict['metrics/mAP50(M)']}, "
+            f"metrics/mAP50-95(M): {metrics.results_dict['metrics/mAP50-95(M)']}, "
             f"Fitness: {metrics.results_dict['fitness']}") 

@@ -226,15 +226,15 @@ def cfg2dict(cfg):
 def get_args(default_cfg: Union[str, Path, Dict, SimpleNamespace] = DEFAULT_CFG_DICT, overrides: Dict = None):
 
 
-    default_cfg_dict = cfg2dict(default_cfg) #迭代器转为字典形式
+    args_dict = cfg2dict(default_cfg) #迭代器转为字典形式
 
     # Merge overrides
     if overrides:
         overrides_dict = cfg2dict(overrides)
-        if "save_dir" not in default_cfg_dict:
+        if "save_dir" not in args_dict:
             overrides_dict.pop("save_dir", None)  # special override keys to ignore
-        check_dict_alignment(default_cfg_dict, overrides_dict)
-        args_dict = {**default_cfg_dict, **overrides_dict}  # merge cfg and overrides dicts (prefer overrides)
+        check_dict_alignment(args_dict, overrides_dict)
+        args_dict = {**args_dict, **overrides_dict}  # merge cfg and overrides dicts (prefer overrides)
 
 
 

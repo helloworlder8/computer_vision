@@ -504,7 +504,7 @@ def check_file(file, suffix="", download=True, hard=True):
             downloads.safe_download(url=url, file=file, unzip=False)
         return file
     else:  # search
-        files = glob.glob(str(ROOT/"cfg"/ "**" / file), recursive=True) or glob.glob(str(ROOT.parent / file))  # 查找范围改动
+        files = glob.glob(str(ROOT/"cfg_yaml"/ "**" / file), recursive=True) or glob.glob(str(ROOT.parent / file))  # 查找范围改动
         if not files and hard:
             raise FileNotFoundError(f"'{file}' does not exist")
         elif len(files) > 1 and hard:

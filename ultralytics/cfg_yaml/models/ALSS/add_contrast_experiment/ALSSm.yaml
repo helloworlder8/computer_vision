@@ -85,7 +85,7 @@ head:
 
 
 
-  - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)                                     24
+  - [[15, 19, 23], 1, Detect, [nc,16]] # Detect(P3, P4, P5)                                     24
 
 
 # Model summary (fused): 188 layers, 2815872 parameters, 2815856 gradients

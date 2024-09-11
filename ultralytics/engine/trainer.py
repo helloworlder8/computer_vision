@@ -21,7 +21,7 @@ import torch
 from torch import distributed as dist
 from torch import nn, optim
 
-from ultralytics.cfg import get_args, get_save_dir
+from ultralytics.cfg_yaml import get_args, get_save_dir
 from ultralytics.data.utils import check_cls_dataset, check_det_dataset
 from ultralytics.nn.tasks import load_download_model_attribute_assignment, attempt_load_weights
 from ultralytics.utils import (

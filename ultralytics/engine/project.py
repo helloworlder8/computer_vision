@@ -7,7 +7,7 @@ import shutil
 import numpy as np
 import torch
 import os
-from ultralytics.cfg import TASK2DATA, get_args, get_save_dir
+from ultralytics.cfg_yaml import TASK2DATA, get_args, get_save_dir
 from ultralytics.engine.results import Results
 from ultralytics.hub import HUB_WEB_ROOT, HUBTrainingSession
 from ultralytics.nn.tasks import load_download_model_attribute_assignment, guess_model_task, nn, create_model_dict
@@ -531,7 +531,10 @@ class BaseProject(nn.Module):
         self.trainer.train() #imp
         
         self._update_model_and_cfg()
-        map50_value = self.metrics.results_dict.get('metrics/mAP50(B)', 'unknown_value')    
+        if self.task == 'detect':
+            map50_value = self.metrics.results_dict.get('metrics/mAP50(B)', 'unknown_value')  
+        else:
+            map50_value = self.metrics.results_dict.get('metrics/mAP50(M)', 'unknown_value')   
         map50_str = f'{map50_value:.3f}' if isinstance(map50_value, (int, float)) else str(map50_value)
         # new_save_dir = os.path.join(self.save_dir, map50_str)   
         new_save_dir = self.metrics.save_dir.with_name(f"{self.metrics.save_dir.name}_{map50_str}") 

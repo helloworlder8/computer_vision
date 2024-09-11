@@ -73,8 +73,8 @@ class TaskAlignedAssigner(nn.Module):
         mask_topk, alignment_scores, iou_scores = self.generate_positive_sample_mask( #计算损失的点 综合得分 iou得分
             pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, gt_mask
         )
-
-        foreground_mask_index, foreground_mask, updated_mask_pos = self.get_fg_mask_and_indices(mask_topk, iou_scores, self.max_boxes)
+        # torch.Size([2, 13, 8400]) torch.Size([2, 13, 8400]) torch.Size([2, 13, 8400])
+        foreground_mask_index, foreground_mask, updated_mask_pos = self.get_fg_mask_and_indices(mask_topk, iou_scores, self.max_boxes)#-> torch.Size([2, 8400]) torch.Size([2, 8400]) torch.Size([2,13, 8400])
 
         # Assigned target
         target_labels, target_bboxes, target_scores = self.assign_targets(gt_labels, gt_bboxes, foreground_mask_index, foreground_mask)
@@ -146,8 +146,8 @@ class TaskAlignedAssigner(nn.Module):
 
         # Prepare indices for selecting scores
         ind = torch.zeros((2, self.batch_size, self.max_boxes), dtype=torch.long) #torch.Size([2, 2, 13])
-        ind[0] = torch.arange(self.batch_size).view(-1, 1).expand(-1, self.max_boxes)  # Batch indices
-        ind[1] = gt_labels.squeeze(-1)  # Class indices
+        ind[0] = torch.arange(self.batch_size).view(-1, 1).expand(-1, self.max_boxes)  #torch.Size([2, 13])
+        ind[1] = gt_labels.squeeze(-1)  # Class indices #torch.Size([2, 13])
 
         # Select predicted scores using batch and class indices #预测包括那一批 哪一个点 哪一个类
         pd_scor[fine_mask_in_gt] = pd_scores[ind[0], :, ind[1]][fine_mask_in_gt]
@@ -157,7 +157,7 @@ class TaskAlignedAssigner(nn.Module):
         gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[fine_mask_in_gt]
 
         # Calculate iou_scores using IoU calculation function
-        iou_scores[fine_mask_in_gt] = self.iou_calculation(gt_boxes, pd_boxes)
+        iou_scores[fine_mask_in_gt] = self.iou_calculation(gt_boxes, pd_boxes) #-》torch.Size([2, 13, 8400])
 
         # Calculate alignment metric
         alignment_scores = pd_scor.pow(self.alpha) * iou_scores.pow(self.beta)
@@ -179,7 +179,7 @@ class TaskAlignedAssigner(nn.Module):
             IoU_options[self.IoU_algorithm] = True
         else:
             raise ValueError(f"Unsupported IOU algorithm: {self.IoU_algorithm}")
-        return bbox_iou(gt_bboxes, pd_bboxes, xywh=False, **IoU_options).squeeze(-1).clamp_(0)
+        return bbox_iou(gt_bboxes, pd_bboxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
 
     def select_topk_candidates(self, alignment_scores, largest=True, topk_mask=None):
         """ torch.Size([2, 13, 8400]) torch.Size([2, 13, 10])
@@ -241,7 +241,7 @@ class TaskAlignedAssigner(nn.Module):
         foreground_mask_index = foreground_mask_index + batch_indices * self.max_boxes  #魔鬼细节 (b, h*w) torch.Size([2, 8400])
 
         # Retrieve target labels
-        target_labels = gt_labels.long().flatten()[foreground_mask_index]  # (b, h*w) torch.Size([2, 8400])
+        target_labels = gt_labels.long().flatten()[foreground_mask_index]  # (b, h*w)-》 torch.Size([2, 8400])
         target_labels.clamp_(0)  # Ensure no negative labels
 
         # Retrieve target bounding boxes
@@ -280,7 +280,7 @@ class TaskAlignedAssigner(nn.Module):
         batch_size, n_boxes, _ = gt_bboxes.shape # 2 13
         lt, rb = gt_bboxes.view(-1, 1, 4).chunk(2, 2)  # torch.Size([26, 1, 2])
         bbox_deltas = torch.cat((anc_points[None] - lt, rb - anc_points[None]), dim=2).view(batch_size, n_boxes, n_anchors, -1) #26 8400 4 每一个框 每一个点 偏移
-        # return (bbox_deltas.min(3)[0] > eps).to(gt_bboxes.dtype) -》torch.Size([26, 8400, 4])
+        # torch.Size([2, 13, 8400, 4])
         return bbox_deltas.amin(3).gt_(eps)
 
     @staticmethod
@@ -321,7 +321,7 @@ class TaskAlignedAssigner(nn.Module):
             updated_mask_pos = mask_topk
 
         # Find the index of the gt that each anchor serves (batch_size, num_anchors)
-        foreground_mask_index = updated_mask_pos.argmax(-2)
+        foreground_mask_index = updated_mask_pos.argmax(-2) #torch.Size([2, 13, 8400]) torch.Size([2, 8400])
 
         return foreground_mask_index, foreground_mask, updated_mask_pos
 

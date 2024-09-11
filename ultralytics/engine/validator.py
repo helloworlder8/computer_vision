@@ -27,7 +27,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ultralytics.cfg import get_args, get_save_dir
+from ultralytics.cfg_yaml import get_args, get_save_dir
 from ultralytics.data.utils import check_cls_dataset, check_det_dataset
 from ultralytics.nn.autobackend import AutoBackend
 from ultralytics.utils import LOGGER, TQDM, callbacks, colorstr, emojis

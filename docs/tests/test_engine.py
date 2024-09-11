@@ -5,7 +5,7 @@ from unittest import mock
 
 from tests import MODEL
 from ultralytics import YOLO
-from ultralytics.cfg import get_args
+from ultralytics.cfg_yaml import get_args
 from ultralytics.engine.exporter import Exporter
 from ultralytics.models.yolo import classify, detect, segment
 from ultralytics.utils import ASSETS, DEFAULT_CFG, WEIGHTS_DIR

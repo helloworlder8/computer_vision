@@ -105,11 +105,11 @@ class ALSS(nn.Module):
         # Shortcut path
         if stride == 2:
             if shortcut_mode == 0:
-                self.shortcut = Conv(self.in_left, self.in_left, 3, 2)
+                self.shortcut = Conv(self.shortcut_channels, self.shortcut_channels, 3, 2)
             elif shortcut_mode == 1:
                 self.shortcut = nn.Sequential(
                     nn.AvgPool2d(kernel_size=3, stride=2, padding=1),
-                    Conv(self.in_left, self.in_left, 3, 1)
+                    Conv(self.shortcut_channels, self.shortcut_channels, 3, 1)
                 )
             else:
                 self.shortcut = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)

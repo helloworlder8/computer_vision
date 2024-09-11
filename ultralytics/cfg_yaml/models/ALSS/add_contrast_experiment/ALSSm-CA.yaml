@@ -8,7 +8,7 @@ nc: 80 # number of classes
 scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
   # [depth, width, max_channels]
   # n: [1, 1, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
-  n: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  n: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   s: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   m: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
   l: [1.00, 1.00, 512] # YOLOv8l summary: 365 layers, 43691520 parameters, 43691504 gradients, 165.7 GFLOPs
@@ -34,7 +34,7 @@ head:
   - [-1, 1, ALSS, [512, 0.2, 0.8, 1, True, -1]] #512 40 40             11 拼
   - [-1, 1, nn.Upsample, [None, 2, "nearest"]] #512 80 80              12
   - [[-1, 4], 1, Concat, [1]] # cat backbone P3  768 80 80             13
-  - [-1, 1, LCA, [768]]       #                                        14
+  - [-1, 1, CA, [768]]       #                                         14
 
 
 
@@ -50,5 +50,5 @@ head:
 
 
 
-  - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)               24
+  - [[15, 19, 23], 1, Detect, [nc,16]] # Detect(P3, P4, P5)               24
   # - [[15, 19, 23], 1, Segment, [nc, 32, 256]] # Detect(P3, P4, P5) 

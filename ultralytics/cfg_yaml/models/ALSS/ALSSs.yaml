@@ -50,5 +50,5 @@ head:
 
 
 
-  # - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)               24
-  - [[15, 19, 23], 1, Segment, [nc, 32, 256]] # Detect(P3, P4, P5) 
+  - [[15, 19, 23], 1, Detect, [nc,16]] # Detect(P3, P4, P5)               24
+  # - [[15, 19, 23], 1, Segment, [nc, 32, 256]] # Detect(P3, P4, P5) 

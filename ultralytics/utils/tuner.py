@@ -2,7 +2,7 @@
 
 import subprocess
 
-from ultralytics.cfg import TASK2DATA, TASK2METRIC, get_save_dir
+from ultralytics.cfg_yaml import TASK2DATA, TASK2METRIC, get_save_dir
 from ultralytics.utils import DEFAULT_CFG, DEFAULT_CFG_DICT, LOGGER, NUM_THREADS, checks
 
 

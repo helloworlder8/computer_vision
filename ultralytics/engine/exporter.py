@@ -64,7 +64,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ultralytics.cfg import TASK2DATA, get_args
+from ultralytics.cfg_yaml import TASK2DATA, get_args
 from ultralytics.data import build_dataloader
 from ultralytics.data.dataset import YOLODataset
 from ultralytics.data.utils import check_cls_dataset, check_det_dataset
