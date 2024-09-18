@@ -323,7 +323,7 @@ def non_max_suppression(
     num_cls = num_cls or (preds.shape[1] - 4)
     num_masks = preds.shape[1] - num_cls - 4
     mask_index = 4 + num_cls
-    conf_TF = preds[:, 4:mask_index].amax(1) > conf #torch.Size([2, 3528])
+    conf_TF = preds[:, 4:mask_index].amax(1) > conf #批 (类框) 点torch.Size([4, 84, 4851])->  torch.Size([2, 3528]) 
 
     time_limit = 2.0 + max_time_img * batch_size
     multi_label &= num_cls > 1
@@ -336,7 +336,7 @@ def non_max_suppression(
     t = time.time()
     NMS_out = [torch.zeros((0, 6 + num_masks), device=preds.device)] * batch_size
 
-    for img_index, pred in enumerate(preds):
+    for img_index, pred in enumerate(preds): #遍历每张图片
         pred = pred[conf_TF[img_index]] #torch.Size([306, 84])
 
         if labels and len(labels[img_index]) and not rotated:
@@ -349,12 +349,12 @@ def non_max_suppression(
         if not pred.shape[0]:
             continue
 
-        pd_box, pd_cls, pd_mask = pred.split((4, num_cls, num_masks), 1)
+        pd_box, pd_cls, pd_mask = pred.split((4, num_cls, num_masks), 1) #4 80 32
 
-        if multi_label:
+        if multi_label: #同一个bbox多个类别
             boxes_index, cls_index = torch.where(pd_cls > conf)
             pred = torch.cat((pd_box[boxes_index], pred[boxes_index, 4 + cls_index, None], cls_index[:, None].float(), pd_mask[boxes_index]), 1)
-        else: #torch.Size([407, 6])
+        else: #torch.Size([407, 6])  box score cls——index   4 1 1 32
             cls_conf, j = pd_cls.max(1, keepdim=True)
             pred = torch.cat((pd_box, cls_conf, j.float(), pd_mask), 1)[cls_conf.view(-1) > conf]
 
@@ -381,7 +381,7 @@ def non_max_suppression(
             boxes_index = torchvision.ops.nms(boxes, pred[:, 4], NMS_Threshold)  # NMS  盒子  置信度 iou
         boxes_index = boxes_index[:max_det]  # limit predn torch.Size([228])
 
-        NMS_out[img_index] = pred[boxes_index[:max_det]] # torch.Size([228, 6]) torch.Size([19, 6])
+        NMS_out[img_index] = pred[boxes_index] # torch.Size([228, 6]) torch.Size([19, 6])
 
         if (time.time() - t) > time_limit:
             LOGGER.warning(f"WARNING ⚠️ NMS time limit {time_limit:.3f}s exceeded")

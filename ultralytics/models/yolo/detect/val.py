@@ -104,11 +104,11 @@ class DetectionValidator(BaseValidator):
             self.args.NMS_Threshold,  #0.7
             labels=self.lb,
             multi_label=True,
-            agnostic=self.args.single_cls,
+            agnostic=self.args.single_cls or self.args.agnostic_nms,
             max_det=self.args.max_det,
         )
 
-    def _get_gt_dict_per_image(self, img_index, batch): #需要对每一张图片进行操作
+    def _get_gt_dict_per_image(self, img_index, batch): #需要对每一张图片进行操作  batch是这一批图像所有真实信息
         """Prepares a batch of images and annotations for validation."""
         TF = batch["batch_idx"] == img_index #
         bbox = batch["bboxes"][TF] #torch.Size([17, 4])

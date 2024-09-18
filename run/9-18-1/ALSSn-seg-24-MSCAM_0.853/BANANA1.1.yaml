@@ -1,0 +1,23 @@
+
+train: [train/images,train1.1/images]  # train images (relative to 'path') 128 images   
+val: [test/images,test1.1/images]  # val images (relative to 'path') 128 images
+test: [test/images,test1.1/images]  # test images (optional)
+nc: 1
+# Classes
+names:
+  0: Banana plantation
+# https://universe.roboflow.com/sai-subhash/javeri/browse?queryText=&pageSize=50&startingIndex=0&browseQuery=true
+
+# @misc{
+#                             javeri_dataset,
+#                             title = { Javeri Dataset },
+#                             type = { Open Source Dataset },
+#                             author = { Sai Subhash },
+#                             howpublished = { \url{ https://universe.roboflow.com/sai-subhash/javeri } },
+#                             url = { https://universe.roboflow.com/sai-subhash/javeri },
+#                             journal = { Roboflow Universe },
+#                             publisher = { Roboflow },
+#                             year = { 2024 },
+#                             month = { apr },
+#                             note = { visited on 2024-09-17 },
+#                             }

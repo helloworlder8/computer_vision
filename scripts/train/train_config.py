@@ -5,40 +5,43 @@ from pathlib import Path
 current_file_path = Path(__file__)
 current_directory = current_file_path.parent
 # data = str(current_directory / Path('../../../datasets/Javeri_det_seg/Javeri_detect_in.yaml'))
-data1 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data2 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data3 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data4 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
+data1 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data2 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data3 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data4 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 
-data5 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data6 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data7 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
-data8 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA.yaml'))
+data5 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data6 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data7 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data8 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 data = "coco-seg.yaml"
 # Javeri_det_seg/Javeri_detect+50%.yaml
 
-model_yaml1='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml2='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml3="ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml"
-model_yaml4='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml5='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml6='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml7='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
-model_yaml8='ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml'
+model_yaml1="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv3-last.yaml"
+model_yaml2="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv2.yaml"
+model_yaml3="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv3.yaml"
+model_yaml4='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv4.yaml'
+model_yaml5='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv5.yaml'
+
+model_yaml6='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv6.yaml'
+model_yaml7='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv7.yaml'
+model_yaml8='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv8.yaml'
 task='segment'
 # task='detect'
 
-project="../exp/BANANA1.1_test"
+project="run/9-18-2"
 
-name1="ALSSn-seg-24-MSCAM-CIoU"
-name2='ALSSn-seg-24-MSCAM-DIoU'
-name3="ALSSn-seg-24-MSCAM-EIoU"
-name4='ALSSn-seg-24-MSCAM-SIoU'
+name1="ALSSn-seg-24-MSCAMv3-last"
+name2="ALSSn-seg-24-MSCAMv2"
+name3="ALSSn-seg-24-MSCAMv3"
+name4='ALSSn-seg-24-MSCAMv4'
+name5='ALSSn-seg-24-MSCAMv5'
 
-name5='ALSSn-seg-24-MSCAM-FineSIoU'
-name6='ALSSn-seg-24-MSCAM-WIoU'
-name7='ALSSn-seg-24-MSCAM-FineSIoUv2'
-name8='Javeri_detect'
+
+name6='ALSSn-seg-24-MSCAMv6'
+
+name7='ALSSn-seg-24-MSCAMv7'
+name8='ALSSn-seg-24-MSCAMv8'
 
 # 批 模 名
 batch1=-1
@@ -51,18 +54,21 @@ batch7=-1
 batch8=-1
 #  CIoU or DIoU or EIoU or SIoU or FineSIoU or WIoU
 IoU1 = "CIoU"
-IoU2 = "DIoU"
-IoU3 = "EIoU"
-IoU4 = "SIoU"
-IoU5 = "FineSIoU"
-IoU6 = "WIoU"
-IoU7 = "FineSIoUv2"
+IoU2 = "CIoU"
+IoU3 = "CIoU"
+IoU4 = "CIoU"
+IoU5 = "CIoU"
+IoU6 = "CIoU"
+IoU7 = "CIoU"
+
+
+
 IoU8 = "CIoU"
-val_interval=1
+val_interval=10
 resume=False
-device='0'
-epochs=130
-patience=100
+device='1'
+epochs=200
+patience=200
 
 
 

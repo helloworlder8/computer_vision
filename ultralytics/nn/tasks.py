@@ -1014,7 +1014,7 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
-        elif m in {SaELayer, MSCAM}:
+        elif m in {SaELayer, MSCAM,MSCAMv2,MSCAMv3,MSCAMv4,MSCAMv5}:
             c1 = c2 = ch[f]
             args = [c1, args[0]]
         else:

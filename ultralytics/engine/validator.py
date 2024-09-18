@@ -76,7 +76,7 @@ class BaseValidator:
             args (SimpleNamespace): Configuration for the validator.
             _callbacks (dict): Dictionary to store various callback functions.
         """
-        self.args = get_args(overrides=args)
+        self.args = get_args(overrides=args) #大参数
         self.dataloader = dataloader
         self.pbar = pbar
         self.stride = None
@@ -130,7 +130,7 @@ class BaseValidator:
             )
             # self.model = model
             self.device = model.device  # update device
-            self.args.half = model.fp16  # update half
+            self.args.half = model.fp16  # update half    false
             stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine  #32 true
             imgsz = check_imgsz(self.args.imgsz, stride=stride)
             if engine:

@@ -54,8 +54,8 @@ class TaskAlignedAssigner(nn.Module):
             target_labels (Tensor): shape(batch_size, num_total_anchors)
             target_bboxes (Tensor): shape(batch_size, num_total_anchors, 4)
             target_scores (Tensor): shape(batch_size, num_total_anchors, nc)
-            foreground_mask (Tensor): shape(batch_size, num_total_anchors)
-            foreground_mask_index (Tensor): shape(batch_size, num_total_anchors)
+            fg_mask (Tensor): shape(batch_size, num_total_anchors)
+            fg_mask_index (Tensor): shape(batch_size, num_total_anchors)
         """
         self.batch_size = pd_bboxes.shape[0] #2
         self.max_boxes = gt_bboxes.shape[1] #13
@@ -74,10 +74,10 @@ class TaskAlignedAssigner(nn.Module):
             pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, gt_mask
         )
         # torch.Size([2, 13, 8400]) torch.Size([2, 13, 8400]) torch.Size([2, 13, 8400])
-        foreground_mask_index, foreground_mask, updated_mask_pos = self.get_fg_mask_and_indices(mask_topk, iou_scores, self.max_boxes)#-> torch.Size([2, 8400]) torch.Size([2, 8400]) torch.Size([2,13, 8400])
+        fg_mask_index, fg_mask, updated_mask_pos = self.get_fg_mask_and_indices(mask_topk, iou_scores, self.max_boxes)#-> torch.Size([2, 8400]) torch.Size([2, 8400]) torch.Size([2,13, 8400])
 
         # Assigned target
-        target_labels, target_bboxes, target_scores = self.assign_targets(gt_labels, gt_bboxes, foreground_mask_index, foreground_mask)
+        target_labels, target_bboxes, target_scores = self.assign_targets(gt_labels, gt_bboxes, fg_mask_index, fg_mask)
 
         # Normalize
         alignment_scores *= updated_mask_pos #torch.Size([2, 13, 8400])
@@ -86,7 +86,7 @@ class TaskAlignedAssigner(nn.Module):
         norm_align_metric = (alignment_scores * pos_overlaps / (pos_align_metrics + self.eps)).amax(-2).unsqueeze(-1)
         target_scores = target_scores * norm_align_metric
 
-        return target_labels, target_bboxes, target_scores, foreground_mask_index, foreground_mask.bool()
+        return target_labels, target_bboxes, target_scores, fg_mask_index, fg_mask.bool()
 
     def generate_positive_sample_mask(self, pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, gt_mask):
         # torch.Size([2, 8400, 80]) torch.Size([2, 8400, 4]) torch.Size([8400, 2]) torch.Size([2, 13, 1]) torch.Size([2, 13, 4]) torch.Size([2, 13, 1])
@@ -221,15 +221,15 @@ class TaskAlignedAssigner(nn.Module):
 
         return mask_topk.to(alignment_scores.dtype)
 
-    def assign_targets(self, gt_labels, gt_bboxes, foreground_mask_index, foreground_mask):
+    def assign_targets(self, gt_labels, gt_bboxes, fg_mask_index, fg_mask):
         """
         Assigns target labels, bounding boxes, and scores to the predicted boxes based on the selected indices.
 
         Args:
-            foreground_mask_index (Tensor): Indices of the selected boxes, shape (b, h*w).
+            fg_mask_index (Tensor): Indices of the selected boxes, shape (b, h*w).
             gt_labels (Tensor): Ground truth labels, shape (b, max_num_obj, 1).
             gt_bboxes (Tensor): Ground truth bounding boxes, shape (b, max_num_obj, 4).
-            foreground_mask (Tensor): Mask indicating foreground boxes, shape (b, h*w).
+            fg_mask (Tensor): Mask indicating foreground boxes, shape (b, h*w).
 
         Returns:
             target_labels (Tensor): Assigned target labels, shape (b, h*w).
@@ -238,14 +238,14 @@ class TaskAlignedAssigner(nn.Module):
         """
         # Compute batch indices and update selected box indices
         batch_indices = torch.arange(self.batch_size, dtype=torch.int64, device=gt_labels.device)[..., None]  # torch.Size([2, 1])
-        foreground_mask_index = foreground_mask_index + batch_indices * self.max_boxes  #魔鬼细节 (b, h*w) torch.Size([2, 8400])
+        fg_mask_index = fg_mask_index + batch_indices * self.max_boxes  #魔鬼细节 (b, h*w) torch.Size([2, 8400])
 
         # Retrieve target labels
-        target_labels = gt_labels.long().flatten()[foreground_mask_index]  # (b, h*w)-》 torch.Size([2, 8400])
+        target_labels = gt_labels.long().flatten()[fg_mask_index]  # (b, h*w)-》 torch.Size([2, 8400])
         target_labels.clamp_(0)  # Ensure no negative labels
 
         # Retrieve target bounding boxes
-        target_bboxes = gt_bboxes.view(-1, gt_bboxes.shape[-1])[foreground_mask_index]  # (b, h*w, 4) torch.Size([2, 8400, 4])
+        target_bboxes = gt_bboxes.view(-1, gt_bboxes.shape[-1])[fg_mask_index]  # (b, h*w, 4) torch.Size([2, 8400, 4])
 
         # Initialize target scores
         target_scores = torch.zeros(
@@ -258,7 +258,7 @@ class TaskAlignedAssigner(nn.Module):
         target_scores.scatter_(2, target_labels.unsqueeze(-1), 1)  #torch.Size([2, 8400, 80])
 
         # Apply foreground mask to target scores
-        fg_scores_mask = foreground_mask[:, :, None].repeat(1, 1, self.nc)  # (b, h*w, nc)
+        fg_scores_mask = fg_mask[:, :, None].repeat(1, 1, self.nc)  # (b, h*w, nc)
         target_scores = torch.where(fg_scores_mask > 0, target_scores, 0) #最后一个维度统一
 
         return target_labels, target_bboxes, target_scores #
@@ -294,16 +294,16 @@ class TaskAlignedAssigner(nn.Module):
             max_num_boxes (int): maximum number of boxes per image.
 
         Returns:
-            foreground_mask_index (Tensor): shape (batch_size, num_anchors), indices of the selected boxes for each anchor.
-            foreground_mask (Tensor): shape (batch_size, num_anchors), binary mask indicating foreground anchors.
+            fg_mask_index (Tensor): shape (batch_size, num_anchors), indices of the selected boxes for each anchor.
+            fg_mask (Tensor): shape (batch_size, num_anchors), binary mask indicating foreground anchors.
             updated_mask_pos (Tensor): shape (batch_size, max_num_boxes, num_anchors), updated mask with highest IoU selections.
         """
         # Calculate the number of foreground anchors for each anchor (batch_size, num_anchors)
-        foreground_mask = mask_topk.sum(-2)
+        fg_mask = mask_topk.sum(-2)
 
-        if foreground_mask.max() > 1:  # If an anchor is assigned to multiple gts
+        if fg_mask.max() > 1:  # If an anchor is assigned to multiple gts
             # Create a mask for anchors assigned to multiple gts (batch_size, max_num_boxes, num_anchors)
-            multiple_gt_mask = foreground_mask.unsqueeze(1).expand(-1, max_num_boxes, -1) > 1
+            multiple_gt_mask = fg_mask.unsqueeze(1).expand(-1, max_num_boxes, -1) > 1
 
             # Find the gt with the highest IoU for each anchor (batch_size, num_anchors)
             highest_iou_indices = iou_scores.argmax(1)
@@ -315,15 +315,15 @@ class TaskAlignedAssigner(nn.Module):
             # Update mask_topk to keep only the highest IoU overlaps for anchors assigned to multiple gts
             updated_mask_pos = torch.where(multiple_gt_mask, highest_iou_mask, mask_topk).float()
             
-            # Recalculate foreground_mask after updating mask_topk
-            foreground_mask = updated_mask_pos.sum(-2)
+            # Recalculate fg_mask after updating mask_topk
+            fg_mask = updated_mask_pos.sum(-2)
         else:
             updated_mask_pos = mask_topk
 
         # Find the index of the gt that each anchor serves (batch_size, num_anchors)
-        foreground_mask_index = updated_mask_pos.argmax(-2) #torch.Size([2, 13, 8400]) torch.Size([2, 8400])
+        fg_mask_index = updated_mask_pos.argmax(-2) #torch.Size([2, 13, 8400]) torch.Size([2, 8400])
 
-        return foreground_mask_index, foreground_mask, updated_mask_pos
+        return fg_mask_index, fg_mask, updated_mask_pos
 
 
 

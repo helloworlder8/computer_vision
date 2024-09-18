@@ -9,19 +9,25 @@ current_directory = current_file_path.parent
 data = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 # data = "coco128.yaml"
 
-model_yaml1='BANANA1.1/ALSSn-seg_0.846/weights/best.pt'
-model_yaml2='runs/ISOD-datasets/ALSSs-CA-ISOD-0.798/weights/best.pt'
-model_yaml3='runs/ISOD-datasets/ALSSm-CA-ISOD-0.770/weights/best.pt'
-model_yaml4='runs/contrast_experiment/yolov8-p2-0.900/weights/best.pt'
-model_yaml5='plot/ass-focus-poolconv-atta-iou-0.891_best.pt'
-model_yaml6='plot/yolov8-width_best.pt'
+model_yaml1='run/result/yolov8-width-seg2_0.867/weights/last.pt'
+model_yaml2='run/result/ALSSn-withoutcov-seg_0.865/weights/last.pt'
+model_yaml3='run/result/ALSSn-seg_0.866/weights/last.pt'
+model_yaml4='run/result/ALSSn-seg-24_0.867/weights/last.pt'
+model_yaml5='run/result/ALSSn-seg-24-MSCAMv2_0.856/weights/last.pt'
+model_yaml6='run/result/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
 
-project="BANANA1.1"
-name1='ALSSn-seg-val'
-name2='ALSSs-CA-ISOD-val'
-name3='ALSSm-CA-ISOD-val'
-name4='yolov8-p2-0.900'
-name5='ass-focus-poolconv-atta-iou-0.891'
-name6='yolov8-width'
+model_yaml7='run/result/ALSSn-seg-24-MSCAMv3-last_0.858/weights/last.pt'
+model_yaml8='run/9-18-1/ALSSn-seg-24-MSCAMv8_0.858/weights/last.pt'
+# model_yaml5='run/BANANA-NEW/ALSSn-seg-MSCAM-last_0.916/weights/last.pt'
+
+project="BANANA_val"
+name1='yolov8-seg-1'
+name2='M1'
+name3='M2'
+name4='M3'
+name5='M4'
+name6='M5'
+name7='M6'
+name8='v8'
 # 批 模 名
-device='2'
+device='1'

@@ -24,17 +24,21 @@ device = torch.device(f"cuda:{get_free_gpu(start_index=0)}")
 
 if __name__=="__main__":
 
-    model1 = YOLO("../checkpoints/yolov8n-seg.pt")  # load an official model
-    metrics = model1.train(data='ultralytics/cfg_yaml/datasets/coco128-seg.yaml',device="0",project="debug",epochs=1,batch=16)
+    # model1 = YOLO("../checkpoints/yolov8n-seg.pt")  # load an official model
+    # metrics = model1.train(data='ultralytics/cfg_yaml/datasets/coco128-seg.yaml',device="0",project="debug",epochs=1,batch=16)
 
 
-    model2 = YOLO(model='yolov8n-seg.yaml')
-    metrics = model2.train(data='ultralytics/cfg_yaml/datasets/coco128-seg.yaml',device="0",project="debug",epochs=3,batch=2)
+    # model2 = YOLO(model='yolov8n-seg.yaml')
+    # metrics = model2.train(data='ultralytics/cfg_yaml/datasets/coco128-seg.yaml',device="0",project="debug",epochs=3,batch=2)
 
-    model3 = YOLO(model='../checkpoints/yolov8n.pt')
-    metrics = model3.train(data='ultralytics/cfg_yaml/datasets/coco128.yaml',device="0",project="debug",epochs=3,batch=2)
+    # model3 = YOLO(model='../checkpoints/yolov8n.pt')
+    # metrics = model3.train(data='ultralytics/cfg_yaml/datasets/coco128.yaml',device="0",project="debug",epochs=3,batch=2)
     
-    model4 = YOLO(model='yolov8n.yaml')
-    metrics = model4.train(data='ultralytics/cfg_yaml/datasets/coco128.yaml',device="0",project="debug",epochs=3,batch=2)  
+    # model4 = YOLO(model='yolov8n.yaml')
+    # metrics = model4.train(data='ultralytics/cfg_yaml/datasets/coco128.yaml',device="0",project="debug",epochs=3,batch=2)  
     # model3 = YOLO("runs/segment/train3/weights/last.pt")  # load an official model
     # metrics = model3.train(resume=True,device="0",epochs=3,batch=16)
+
+
+    model1 = YOLO("../checkpoints/yolov8n-seg.pt")
+    metrics = model1.val(data="ultralytics/cfg_yaml/datasets/coco128-seg.yaml",split='val',device="0",project="debug",epochs=3,batch=2)

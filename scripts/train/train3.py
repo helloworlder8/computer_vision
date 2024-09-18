@@ -9,12 +9,15 @@ if __name__ == '__main__':
     model = YOLO(model=model_yaml3,task=task)
 
     metrics = model.train(data=data3,
+                batch=batch3,
+                IoU=IoU3,
                 cache=False,
                 imgsz=640,
+                
                 # close_mosaic=10,
                 # workers=4,
                 # optimizer='SGD', # using SGD
-                IoU=IoU3,
+
                 val_interval=val_interval,
                 resume=resume, # last.pt path
                 # amp=False # close amp
@@ -24,7 +27,7 @@ if __name__ == '__main__':
                 name=name3,
                 device= device,
                 epochs=epochs,
-                batch=batch3,
+
                 
                 patience = patience,
 
@@ -37,3 +40,4 @@ if __name__ == '__main__':
 
 
 
+# Model summary: 251 layers, 1,577,473 parameters, 1,577,457 gradients, 8.2 GFLOPs

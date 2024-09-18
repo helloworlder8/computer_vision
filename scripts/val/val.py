@@ -7,7 +7,7 @@ if __name__ == '__main__':
     model1.val(data=data,
               split='val',
               imgsz=640,
-              batch=2,
+              batch=20,
               # rect=False,
               # save_json=True, # if you need to cal coco metrice
               device=device,
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # model2.val(data=data,
     #           split='val',
     #           imgsz=640,
-    #           batch=64,
+    #           batch=20,
     #           # rect=False,
     #           # save_json=True, # if you need to cal coco metrice
     #           device=device,
@@ -31,10 +31,71 @@ if __name__ == '__main__':
     # model3.val(data=data,
     #           split='val',
     #           imgsz=640,
-    #           batch=64,
+    #           batch=20,
     #           # rect=False,
     #           # save_json=True, # if you need to cal coco metrice
     #           device=device,
     #           project=project,
     #           name=name3,
     #           )
+    
+    # model4 = YOLO(model_yaml4)
+    # model4.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name4,
+    #           )
+    
+    # model5 = YOLO(model_yaml5)
+    # model5.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name5,
+    #           )
+    
+    # model6 = YOLO(model_yaml6)
+    # model6.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name6,
+    #           )
+
+    # model7 = YOLO(model_yaml7)
+    # model7.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name7,
+    #           )
+    
+    # model8 = YOLO(model_yaml8)
+    # model8.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name8,
+    #           )
+    # # 2.3

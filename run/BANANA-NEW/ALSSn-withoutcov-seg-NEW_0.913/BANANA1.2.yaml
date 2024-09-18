@@ -1,0 +1,8 @@
+
+train: [train/images,train1.1/images,]  # train images (relative to 'path') 128 images   
+val: [train1.1-test/images]  # val images (relative to 'path') 128 images
+test: [train1.1-test/images]  # test images (optional)
+nc: 1
+# Classes
+names:
+  0: Banana plantation

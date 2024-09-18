@@ -186,9 +186,8 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, EIoU=Fal
     inter = (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) * \
             (torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)).clamp(0)
 
+
     # Union Area
-    w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
-    w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
     union = w1 * h1 + w2 * h2 - inter + eps
 
     if scale:
@@ -209,23 +208,23 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, EIoU=Fal
             if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorconvex_hei/blob/master/utils/box/box_utils.py#L47
                 v = (4 / math.pi ** 2) * (torch.atan(w2 / h2) - torch.atan(w1 / h1)).pow(2)
                 with torch.no_grad():
-                    param_ciou = v / (v - iou + (1 + eps))
+                    alpha = v / (v - iou + (1 + eps))
                 if Focal:
-                    return iou - (center_dist_squared / convex_diagonal_squared + torch.pow(v * param_ciou + eps, pow)), torch.pow(inter/(union + eps), gamma)  # Focal_CIoU
+                    return iou - (center_dist_squared / convex_diagonal_squared + torch.pow(v * alpha + eps, pow)), torch.pow(inter/(union + eps), gamma)  # Focal_CIoU
                 else:
 
 
                     """ CIoU """
-                    return iou - (center_dist_squared / convex_diagonal_squared + torch.pow(v * param_ciou + eps, pow))  # CIoU
+                    return iou - (center_dist_squared / convex_diagonal_squared + torch.pow(v * alpha + eps, pow))  # CIoU
             elif EIoU:
-                rho_w2 = ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** 2 #torch.Size([53121, 1])宽度差的平方
-                rho_h2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2 #torch.Size([53121, 1])高度差的平方
-                convex_wid2 = torch.pow(center_width ** 2 + eps, pow)
-                convex_hei2 = torch.pow(center_height ** 2 + eps, pow)
+                wid_dif2 = ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** 2 #torch.Size([53121, 1])宽度差的平方
+                hei_dif2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2 #torch.Size([53121, 1])高度差的平方
+                convex_wid2 = torch.pow(convex_width ** 2 + eps, pow)
+                convex_hei2 = torch.pow(convex_height ** 2 + eps, pow)
                 if Focal:
-                    return iou - (center_dist_squared / convex_diagonal_squared + rho_w2 / convex_wid2 + rho_h2 / convex_hei2), torch.pow(inter/(union + eps), gamma) # Focal_EIou
+                    return iou - (center_dist_squared / convex_diagonal_squared + wid_dif2 / convex_wid2 + hei_dif2 / convex_hei2), torch.pow(inter/(union + eps), gamma) # Focal_EIou
                 else:
-                    return iou - (center_dist_squared / convex_diagonal_squared + rho_w2 / convex_wid2 + rho_h2 / convex_hei2) # EIou
+                    return iou - (center_dist_squared / convex_diagonal_squared + wid_dif2 / convex_wid2 + hei_dif2 / convex_hei2) # EIou
 
 
             elif SIoU:
@@ -1309,7 +1308,7 @@ class Metric(SimpleClass):
     def fitness(self):
         """Model fitness as a weighted combination of metrics."""
         # w = [0.0, 0.0, 0.1, 0.9]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]
-        w = [0.0, 0.0, 1, 0]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]
+        w = [0.0, 0.0, 0.1, 0.9]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]
         return (np.array(self.mean_results()) * w).sum()
 
     def update(self, results):
@@ -1567,8 +1566,8 @@ class SegmentMetrics(SimpleClass):
     @property
     def fitness(self):
         """Get the fitness score for both segmentation and bounding box models."""
-        # return self.seg.fitness() + self.box.fitness()
-        return self.seg.fitness()
+        return self.seg.fitness() + self.box.fitness()
+        # return self.seg.fitness()
     
     @property
     def ap_class_index(self):

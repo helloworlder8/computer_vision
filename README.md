@@ -2,7 +2,7 @@
 
 官方文档 https://docs.ultralytics.com/zh/usage/simple-utilities/?h=yolo_bbox2segment#convert-coco-into-yolo-format
 
-此版本改动较大
+此版本保留所有训练结果
 
 
 ## 文档快速索引

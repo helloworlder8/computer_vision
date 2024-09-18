@@ -9,12 +9,15 @@ if __name__ == '__main__':
     model = YOLO(model=model_yaml1,task=task)
 
     metrics = model.train(data=data1,
+                batch=batch1,
+                IoU=IoU1,
                 cache=False,
                 imgsz=640,
+                
                 # close_mosaic=10,
                 # workers=4,
                 # optimizer='SGD', # using SGD
-                IoU=IoU1,
+
                 val_interval=val_interval,
                 resume=resume, # last.pt path
                 # amp=False # close amp
@@ -24,7 +27,7 @@ if __name__ == '__main__':
                 name=name1,
                 device= device,
                 epochs=epochs,
-                batch=batch1,
+
                 
                 patience = patience,
 

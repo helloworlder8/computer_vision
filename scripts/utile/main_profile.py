@@ -32,7 +32,7 @@ def process_all_models(directory,ch):
 
 if __name__ == '__main__':
     # model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg.yaml"
-    model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSn-seg-24-MSCAM.yaml"
+    model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg-MSCAM-38.yaml"
     ch = 3
     # 检查model_directory是文件还是文件夹
     if os.path.isfile(model_directory):
@@ -42,5 +42,5 @@ if __name__ == '__main__':
     else:
         print(f"Error: {model_directory} is neither a file nor a directory.")
         
-# Model summary (fused): 173 layers, 2,763,087 parameters, 2,763,071 gradients''
-# Model summary (fused): 173 layers, 2,740,479 parameters, 2,740,463 gradients
+# Model summary (fused): 204 layers, 1,825,773 parameters, 1,825,749 gradients, 9.3 GFLOPs
+# Model summary (fused): 195 layers, 1,695,159 parameters, 1,695,143 gradients, 7.1 GFLOPs

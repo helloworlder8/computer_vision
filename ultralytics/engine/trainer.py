@@ -440,7 +440,7 @@ class BaseTrainer:
             
             with torch.cuda.amp.autocast(self.amp):
                 batch = self._normalize_img(batch) #归一化
-                self.loss, self.loss_items = self.model(batch) #最重点 #imp
+                self.loss, self.loss_items = self.model(batch) #最重点 # imp
                 if RANK != -1:
                     self.loss *= world_size
                 self.avg_loss_items = (self.avg_loss_items * i + self.loss_items) / (i + 1) if self.avg_loss_items is not None else self.loss_items #平均单独损失
