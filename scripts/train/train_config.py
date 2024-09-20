@@ -1,4 +1,82 @@
 
+# from pathlib import Path
+
+# # 获取当前脚本的相对路径
+# current_file_path = Path(__file__)
+# current_directory = current_file_path.parent
+# # data = str(current_directory / Path('../../../datasets/Javeri_det_seg/Javeri_detect_in.yaml'))
+# data1 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data2 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data3 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data4 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+
+# data5 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data6 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data7 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data8 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+# data = "coco-seg.yaml"
+
+# model_yaml1="run/Comparative_experiment/yolov3-tiny-seg.yaml"
+# model_yaml2="run/Comparative_experiment/yolov5-seg.yaml"
+# model_yaml3="run/Comparative_experiment/yolov6-seg.yaml"
+# model_yaml4='run/Comparative_experiment/yolov8-seg-ghost.yaml'
+# model_yaml5='run/Comparative_experiment/yolov8-seg-p2.yaml'
+# model_yaml6='run/Comparative_experiment/yolov8-seg-p6.yaml'
+# model_yaml7='run/Comparative_experiment/yolov9t-seg.yaml'
+# model_yaml8='run/Comparative_experiment/yolov10-seg.yaml'
+
+# task='segment'
+# # task='detect'
+
+# project="run/Comparative_experiment_exp"
+
+# name1="yolov3-tiny-seg"
+# name2="yolov5-seg"
+# name3="yolov6-seg"
+# name4='yolov8-seg-ghost'
+# name5='yolov8-seg-p2'
+
+
+# name6='yolov8-seg-p6'
+
+# name7='yolov9t-seg'
+# name8='yolov10-seg'
+
+# # 批 模 名
+# batch1=-1
+# batch2=-1
+# batch3=-1
+# batch4=-1
+# batch5=-1
+# batch6=-1
+# batch7=-1
+# batch8=-1
+# #  CIoU or DIoU or EIoU or SIoU or FineSIoU or WIoU
+# IoU1 = "CIoU"
+# IoU2 = "CIoU"
+# IoU3 = "CIoU"
+# IoU4 = "CIoU"
+# IoU5 = "CIoU"
+# IoU6 = "CIoU"
+# IoU7 = "CIoU"
+
+
+
+# IoU8 = "CIoU"
+# val_interval=10
+# resume=False
+# device='1'
+# epochs=200
+# patience=200
+
+
+
+
+
+
+
+
+
 from pathlib import Path
 
 # 获取当前脚本的相对路径
@@ -15,33 +93,32 @@ data6 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml
 data7 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 data8 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 data = "coco-seg.yaml"
-# Javeri_det_seg/Javeri_detect+50%.yaml
 
-model_yaml1="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv3-last.yaml"
-model_yaml2="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv2.yaml"
-model_yaml3="ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv3.yaml"
-model_yaml4='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv4.yaml'
-model_yaml5='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv5.yaml'
+model_yaml1="run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt"
+model_yaml2="run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt"
+model_yaml3="run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt"
+model_yaml4='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
+model_yaml5='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
+model_yaml6='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
+model_yaml7='run/Comparative_experiment/yolov9t-seg.yaml'
+model_yaml8='run/Comparative_experiment/yolov10-seg.yaml'
 
-model_yaml6='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv6.yaml'
-model_yaml7='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv7.yaml'
-model_yaml8='ultralytics/cfg_yaml/models/ALSSv3/ALSSn-seg-24-MSCAMv8.yaml'
 task='segment'
 # task='detect'
+# GIoU=False, DIoU=False, CIoU=False, EIoU=False, SIoU=False
+project="run/Ablation_experiment_exp"
 
-project="run/9-18-2"
-
-name1="ALSSn-seg-24-MSCAMv3-last"
-name2="ALSSn-seg-24-MSCAMv2"
-name3="ALSSn-seg-24-MSCAMv3"
-name4='ALSSn-seg-24-MSCAMv4'
-name5='ALSSn-seg-24-MSCAMv5'
+name1="GIoU"
+name2="DIoU"
+name3="CIoU"
+name4='EIoU'
+name5='SIoU'
 
 
-name6='ALSSn-seg-24-MSCAMv6'
+name6='WIoU'
 
-name7='ALSSn-seg-24-MSCAMv7'
-name8='ALSSn-seg-24-MSCAMv8'
+name7='yolov9t-seg'
+name8='yolov10-seg'
 
 # 批 模 名
 batch1=-1
@@ -53,68 +130,19 @@ batch6=-1
 batch7=-1
 batch8=-1
 #  CIoU or DIoU or EIoU or SIoU or FineSIoU or WIoU
-IoU1 = "CIoU"
-IoU2 = "CIoU"
-IoU3 = "CIoU"
+IoU1 = "GIoU"
+IoU2 = "DIoU"
+IoU3 = "EIoU"
 IoU4 = "CIoU"
-IoU5 = "CIoU"
-IoU6 = "CIoU"
+IoU5 = "SIoU"
+IoU6 = "WIoU"
 IoU7 = "CIoU"
 
 
 
 IoU8 = "CIoU"
 val_interval=10
-resume=False
+resume=True
 device='1'
-epochs=200
+epochs=230
 patience=200
-
-
-
-
-
-
-# from pathlib import Path
-
-# # 获取当前脚本的相对路径
-# current_file_path = Path(__file__)
-# current_directory = current_file_path.parent
-# data = str(current_directory / Path('../../../datasets/Javeri_det_seg/Javeri_segment.yaml'))
-# # data = str(current_directory / Path('../../../datasets/ISOD1.1/ISOD.yaml'))
-# # data = "coco128.yaml"
-
-
-# model_yaml1='yolov8n-seg.yaml'
-# model_yaml2='ultralytics/cfg/models/ALSS/ALSSs.yaml'
-# model_yaml3="ultralytics/cfg/models/ALSS/ALSSm.yaml"
-# model_yaml4='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSn-CA.yaml'
-# model_yaml5='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSs-CA.yaml'
-# model_yaml6='ultralytics/cfg/models/ALSS/add_contrast_experiment/ALSSm-CA.yaml'
-
-# name1="Javeri-seg"
-# name2='ALSSs'
-# name3="ALSSm"
-# name4='ALSSn-CA'
-# name5='ALSSs-CA'
-# name6='ALSSm-CA'
-
-# IoU = "CIoU"
-# project=""
-# # 批 模 名
-# batch1=-1
-# batch2=-1
-# batch3=-1
-# batch4=-1
-# batch5=-1
-# batch6=-1
-
-# val_interval=1
-
-# task='segment'
-# # task='detect'
-
-# resume=False
-# device='0'
-# epochs=200
-# patience=20

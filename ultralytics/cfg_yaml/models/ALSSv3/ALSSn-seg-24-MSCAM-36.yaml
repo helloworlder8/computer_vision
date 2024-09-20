@@ -50,7 +50,7 @@ head:
 
 
   # - [[15, 19, 23], 1, Detect, [nc]] # Detect(P3, P4, P5)               24
-  - [[16, 19, 22], 1, Segment, [nc, 36, 256, 24]] # Detect(P3, P4, P5) 
+  - [[16, 19, 22], 1, Segment, [nc, 36, 256, 24]] # Detect(P3, P4, P5) #[80, 32, 256, [256, 512, 1024]]
 # nc=80, nm=32, npr=256
 
 # Model summary: 268 layers, 1,824,473 parameters, 1,824,449 gradients, 9.4 GFLOPs

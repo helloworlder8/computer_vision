@@ -32,7 +32,7 @@ def process_all_models(directory,ch):
 
 if __name__ == '__main__':
     # model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg.yaml"
-    model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg-MSCAM-38.yaml"
+    model_directory = "run/Comparative_experiment/yolov10-depth-seg.yaml"
     ch = 3
     # 检查model_directory是文件还是文件夹
     if os.path.isfile(model_directory):

@@ -32,7 +32,7 @@ def get_weight_size(path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='runs/detect/ALSSn-LCA_22-BIRDSAI-0.873/weights/best.pt', help='trained weights path')
+    parser.add_argument('--weights', type=str, default='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3-last_0.858/weights/last.pt', help='trained weights path')
     parser.add_argument('--batch', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--imgs', nargs='+', type=int, default=[640, 640], help='[height, width] image sizes')
     parser.add_argument('--device', default='3', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     
     model = model.to(device)
     model.fuse()
-    example_inputs = torch.randn((opt.batch, 1, *opt.imgs)).to(device)
+    example_inputs = torch.randn((opt.batch, 3, *opt.imgs)).to(device)
     
     if opt.half:
         model = model.half()
