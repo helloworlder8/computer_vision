@@ -61,7 +61,7 @@ class Detect(nn.Module):#检测头
         if self.training:  # Training path  144 的话包含80分类和64目标检测
             return x
         y = self._inference(x) #torch.Size([2, 84, 3528])
-        return y if self.export else (y, x) #torch.Size([2, 84, 3528]) 以及每一层输入
+        return y if self.export else (y, x) #torch.Size([1, 84, 8400]) 以及每一层输入
 
     def forward_end2end(self, x):
         """
@@ -90,8 +90,8 @@ class Detect(nn.Module):#检测头
     def _inference(self, x):
         """Decode predicted bounding boxes and class probabilities based on multiple-level feature maps."""
         # Inference path
-        shape = x[0].shape  # BCHW torch.Size([2, 144, 32, 84])
-        x_cat = torch.cat([xi.view(shape[0], self.no, -1) for xi in x], 2) #torch.Size([2，144，3528]) 批 回归分类 点
+        shape = x[0].shape  # BCHW torch.Size([1, 144, 80, 80])
+        x_cat = torch.cat([xi.view(shape[0], self.no, -1) for xi in x], 2) #torch.Size([1, 144, 8400])
         if self.dynamic or self.shape != shape:
             self.anc_points, self.stride_tensor = (x.transpose(0, 1) for x in make_anchors(x, self.stride, 0.5))
             self.shape = shape
@@ -113,7 +113,7 @@ class Detect(nn.Module):#检测头
         else:
             dbox = self.decode_bboxes(self.dfl(box), self.anc_points.unsqueeze(0)) * self.stride_tensor #torch.Size([1, 4, 8400])
             # torch.Size([1, 4, 8400]) torch.Size([1, 2, 8400])
-        return torch.cat((dbox, cls.sigmoid()), 1) #torch.Size([2, 4, 3528]) torch.Size([2, 80, 3528])
+        return torch.cat((dbox, cls.sigmoid()), 1) #torch.Size([2, 4, 8400]) torch.Size([2, 80, 8400])
 
     def bias_init(self):
         """Initialize Detect() biases, WARNING: requires stride availability."""
@@ -187,14 +187,14 @@ class Segment(Detect):
         proto = self.proto(x[0])  # mask protos  卷积 上采样 卷积 卷积 -》torch.Size([2, 32, 160, 160])
         bs = proto.shape[0]  # batch size  2     80x80 40x40 20x20
         # [torch.Size([2, 256, 80, 80]), torch.Size([2, 512, 40, 40]), torch.Size([2, 1024, 20, 20])]
-        pd_masks = torch.cat([self.cv4[i](x[i]).view(bs, self.nm, -1) for i in range(self.nl)], 2)  #torch.Size([2, 32, 8400]) 统一起来
+        Mask_Coeff = torch.cat([self.cv4[i](x[i]).view(bs, self.nm, -1) for i in range(self.nl)], 2)  #torch.Size([2, 32, 8400]) 统一起来
         x = Detect.forward(self, x) 
         if self.training:
-            # feats, pd_masks, proto
-            return x, pd_masks, proto #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
-        return (torch.cat([x, pd_masks], 1), proto) if self.export else (torch.cat([x[0], pd_masks], 1), (x[1], pd_masks, proto))
-        # 框 类别置信度 32维度    点                                                1 32 21504     1 32 256 256
-
+            # feats, Mask_Coeff, proto
+            return x, Mask_Coeff, proto #-》[torch.Size([2, 144, 80, 80]), torch.Size([2, 144, 40, 40]), torch.Size([2, 144, 20, 20])]
+        return (torch.cat([x, Mask_Coeff], 1), proto) if self.export else (torch.cat([x[0], Mask_Coeff], 1), (x[1], Mask_Coeff, proto))
+        # 框 类别置信度 32维度    点                                         torch.Size([1, 84, 8400])
+# Mask_Coeff
 class OBB(Detect):
     """YOLOv8 OBB detection head for detection with rotation models."""
 

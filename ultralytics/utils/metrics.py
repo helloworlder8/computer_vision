@@ -1034,6 +1034,46 @@ def plot_pr_curve(px, py, ap, save_dir=Path("pr_curve.png"), names=(), on_plot=N
         on_plot(save_dir)
 
 
+# Plots ----------------------------------------------------------------------------------------------------------------
+
+# def plot_pr_curve(px, py, ap, save_dir=Path("pr_curve.png"), names=(), on_plot=None):
+#     """Plots a precision-recall curve."""
+#     fig, ax = plt.subplots(1, 1, figsize=(9, 6), tight_layout=True)
+#     py = np.stack(py, axis=1)
+
+#     # 改动
+#     pr_dict = dict()
+#     pr_dict['px'] = px.tolist()
+
+
+#     if 0 < len(names) < 21:  # display per-class legend if < 21 classes
+#         for i, y in enumerate(py.T):
+#             ax.plot(px, y, linewidth=1, label=f"{names[i]} {ap[i, 0]:.3f}")  # plot(recall, precision)
+#             # 改动2
+#             pr_dict[names[i]] = y.tolist()
+#     else:
+#         ax.plot(px, py, linewidth=1, color="grey")  # plot(recall, precision)
+
+#     # 改动3
+#     pr_dict['all'] = py.mean(1).tolist()
+#     import pandas as pd
+#     dataformat = pd.DataFrame(pr_dict)
+#     save_csvpath = save_dir.cwd() / (str(save_dir).replace('.png', '.csv')) # 定义csv文件的保存位置
+#     dataformat.to_csv(save_csvpath, sep=',')
+
+#     ax.plot(px, py.mean(1), linewidth=3, color="blue", label="all classes %.3f mAP@0.5" % ap[:, 0].mean())
+#     ax.set_xlabel("Recall")
+#     ax.set_ylabel("Precision")
+#     ax.set_xlim(0, 1)
+#     ax.set_ylim(0, 1)
+#     ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+#     ax.set_title("Precision-Recall Curve")
+#     fig.savefig(save_dir, dpi=250)
+#     plt.close(fig)
+#     if on_plot:
+#         on_plot(save_dir)
+
+
 @plt_settings() 
 def plot_mc_curve(px, py, save_dir=Path("mc_curve.png"), names=(), xlabel="Confidence", ylabel="Metric", on_plot=None):
     """Plots a metric-confidence curve."""
@@ -1057,6 +1097,61 @@ def plot_mc_curve(px, py, save_dir=Path("mc_curve.png"), names=(), xlabel="Confi
     plt.close(fig)
     if on_plot:
         on_plot(save_dir)
+
+# def plot_mc_curve(px, py, save_dir=Path("mc_curve.png"), names=(), xlabel="Confidence", ylabel="Metric", on_plot=None):
+#     """Plots a metric-confidence curve."""
+#     fig, ax = plt.subplots(1, 1, figsize=(9, 6), tight_layout=True)
+
+#     # -----------------lwd edit: 将结果保存在csv中--------------- #
+#     # 判断是不是绘制F1_curve曲线
+#     flag = False
+#     if str(save_dir).endswith('F1_curve.png'):
+#         flag = True
+#         pr_dict = dict()    # lwd edit
+#         pr_dict['px'] = px.tolist() # lwd edit
+#     # --------------------------------------------------------- #
+
+
+
+#     if 0 < len(names) < 21:  # display per-class legend if < 21 classes
+#         for i, y in enumerate(py):
+#             ax.plot(px, y, linewidth=1, label=f"{names[i]}")  # plot(confidence, metric)
+#             # 改动2
+#             if flag:
+#                 pr_dict[names[i]] = y.tolist()
+
+#     else:
+#         ax.plot(px, py.T, linewidth=1, color="grey")  # plot(confidence, metric)
+
+
+
+#     if flag:
+#             pr_dict['all'] = y.tolist()
+#             import pandas as pd
+#             dataformat = pd.DataFrame(pr_dict)
+#             save_csvpath = save_dir.cwd() / (str(save_dir).replace('.png', '.csv')) # 定义csv文件的保存位置
+#             dataformat.to_csv(save_csvpath, sep=',')
+#         # ---------------------------------------------------- #
+
+
+
+
+#     y = smooth(py.mean(0), 0.05)
+#     ax.plot(px, y, linewidth=3, color="blue", label=f"all classes {y.max():.2f} at {px[y.argmax()]:.3f}")
+#     ax.set_xlabel(xlabel)
+#     ax.set_ylabel(ylabel)
+#     ax.set_xlim(0, 1)
+#     ax.set_ylim(0, 1)
+#     ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+#     ax.set_title(f"{ylabel}-Confidence Curve")
+#     fig.savefig(save_dir, dpi=250)
+#     plt.close(fig)
+#     if on_plot:
+#         on_plot(save_dir)
+
+
+
+
 
 
 def compute_ap(recall, precision):

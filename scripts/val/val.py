@@ -68,31 +68,31 @@ if __name__ == '__main__':
               name=name5,
               )
     
-    model6 = YOLO(model_yaml6)
-    model6.val(data=data,
-              split='val',
-              imgsz=640,
-              batch=20,
-              IoU=IoU6,
-              # rect=False,
-              # save_json=True, # if you need to cal coco metrice
-              device=device,
-              project=project,
-              name=name6,
-              )
+    # model6 = YOLO(model_yaml6)
+    # model6.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           IoU=IoU6,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name6,
+    #           )
 
-#     model7 = YOLO(model_yaml7)
-#     model7.val(data=data,
-#               split='val',
-#               imgsz=640,
-#               batch=20,
-#               IoU=IoU7,
-#               # rect=False,
-#               # save_json=True, # if you need to cal coco metrice
-#               device=device,
-#               project=project,
-#               name=name7,
-#               )
+    # model7 = YOLO(model_yaml7)
+    # model7.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=20,
+    #           IoU=IoU7,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name7,
+    #           )
     
 #     model8 = YOLO(model_yaml8)
 #     model8.val(data=data,

@@ -5,25 +5,35 @@ import os
 # 检查文件夹是否存在，如果不存在则创建它
 if not os.path.exists("plot_curve"):
     os.makedirs("plot_curve")
-
 # 绘制PR
 def plot_PR():
     pr_csv_dict = {
-        "YOLOv8-N'": r'plot_material/ablation_experiment/yolov8-width_PR_curve.csv',
-        'M1': r'plot_material/ablation_experiment/ass-0.879_PR_curve.csv',
-        'M2': r'plot_material/ablation_experiment/ass-focus-0.887_PR_curve.csv',
-        'M3': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.891_PR_curve.csv',
-        'M4': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.885_PR_curve.csv',
-        'M5(ALSS-YOLO)': r'plot_material/ablation_experiment/ass-focus-poolconv-0.886_PR_curve.csv',
+        "YOLOv9t-Seg'": r'result/Comparative_experiment_exp_val/yolov9t/MaskPR_curve.csv',
+        "YOLOv8-p6-Seg'": r'result/Comparative_experiment_exp_val/yolov8-seg-p6/MaskPR_curve.csv',
+        "YOLOv6-Seg'": r'result/Comparative_experiment_exp_val/yolov6-seg/MaskPR_curve.csv',
+        "YOLOv8-ghost-Seg'": r'result/Comparative_experiment_exp_val/yolov8-seg-ghost/MaskPR_curve.csv',
+        'ALSS-YOLO-Seg': r'result/Comparative_experiment_exp_val/ALSSn/MaskPR_curve.csv',
+        # 'ALSS-YOLO-Seg': r'result/Ablation_experiment_exp_val/M4/MaskPR_curve.csv',
+        # 'M6': r'result/Ablation_experiment_exp_val/M1/MaskPR_curve.csv',
     }
 
+    # 指定颜色列表（红橙黄绿蓝靛紫）
+    # colors = [
+    #     (223/255, 141/255, 143/255),
+    #     (255/255, 170/255, 137/255),
+    #     (126/255, 208/255, 248/255),
+    #     (252/255, 211/255, 181/255),
+    #     (126/255, 126/255, 237/255),
+    #     (255/255, 220/255, 126/255)
+    # ]
     original_colors = [
         (254, 194, 17),
         (81,  81, 81),
         (26, 111, 223),
-        (55, 173, 107),
+        # (55, 173, 107),
         (117, 119, 222),
-        (239, 0, 0)
+        (239, 0, 0),
+        # (102, 76, 98)
     ]
     colors = [(r/255, g/255, b/255) for r, g, b in original_colors]
     # 绘制 PR 曲线
@@ -31,7 +41,7 @@ def plot_PR():
     for modelname, color in zip(pr_csv_dict, colors):
         res_path = pr_csv_dict[modelname]
         x = pd.read_csv(res_path, usecols=[1]).values.ravel()
-        data = pd.read_csv(res_path, usecols=[6]).values.ravel()
+        data = pd.read_csv(res_path, usecols=[3]).values.ravel()
         ax.plot(x, data, label=modelname, linewidth=2, color=color)
 
     # 添加x轴和y轴标签
@@ -41,9 +51,9 @@ def plot_PR():
     ax.set_ylim(0, 1)
     # plt.legend(bbox_to_anchor=(1.04, 1), loc='upper left')
     plt.legend()
-    plt.grid(True)  # 显示网格线
+    # plt.grid(True)  # 显示网格线
     # 显示图像
-    fig.savefig("plot_curve/ablation_PR.png", dpi=520)
+    fig.savefig("plot_curve/Ablation_PR.png", dpi=400)
 #     plt.show()
 
 
@@ -51,20 +61,22 @@ def plot_PR():
 # 绘制F1
 def plot_F1():
     f1_csv_dict = {
-        "YOLOv8-N'": r'plot_material/ablation_experiment/yolov8-width_F1_curve.csv',
-        'M1': r'plot_material/ablation_experiment/ass-0.879_F1_curve.csv',
-        'M2': r'plot_material/ablation_experiment/ass-focus-0.887_F1_curve.csv',
-        'M3': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.891_F1_curve.csv',
-        'M4': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.885_F1_curve.csv',
-        'M5(ALSS-YOLO)': r'plot_material/ablation_experiment/ass-focus-poolconv-0.886_F1_curve.csv',
+        "YOLOv9t-Seg'": r'result/Comparative_experiment_exp_val/yolov9t/MaskF1_curve.csv',
+        "YOLOv8-p6-Seg'": r'result/Comparative_experiment_exp_val/yolov8-seg-p6/MaskF1_curve.csv',
+        "YOLOv6-Seg'": r'result/Comparative_experiment_exp_val/yolov6-seg/MaskF1_curve.csv',
+        "YOLOv8-ghost-Seg'": r'result/Comparative_experiment_exp_val/yolov8-seg-ghost/MaskF1_curve.csv',
+        "ALSS-YOLO-Seg": r'result/Comparative_experiment_exp_val/ALSSn/MaskF1_curve.csv',
+
+
     }
     original_colors = [
         (254, 194, 17),
         (81,  81, 81),
         (26, 111, 223),
-        (55, 173, 107),
+        # (55, 173, 107),
         (117, 119, 222),
-        (239, 0, 0)
+        (239, 0, 0),
+        # (102, 76, 98)
     ]
     colors = [(r/255, g/255, b/255) for r, g, b in original_colors]
     fig, ax = plt.subplots(1, 1, figsize=(8, 6), tight_layout=True)
@@ -73,7 +85,7 @@ def plot_F1():
     for modelname, color in zip(f1_csv_dict, colors):
         res_path = f1_csv_dict[modelname]
         x = pd.read_csv(res_path, usecols=[1]).values.ravel()
-        data = pd.read_csv(res_path, usecols=[6]).values.ravel()
+        data = pd.read_csv(res_path, usecols=[3]).values.ravel()
         ax.plot(x, data, label=modelname, linewidth=2, color=color)
 
 
@@ -83,19 +95,19 @@ def plot_F1():
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     plt.legend()
-    plt.grid()  # 显示网格线
+    # plt.grid()  # 显示网格线
     # 显示图像
-    fig.savefig("plot_curve/ablation_F1.png", dpi=520)
+    fig.savefig("plot_curve/Ablation_F1.png", dpi=400)
     # plt.show()
 
 def plot_MAP():
     map_csv_dict = {
-        "YOLOv8-N'": r'plot_material/ablation_experiment/yolov8-width_results.csv',
-        'M1': r'plot_material/ablation_experiment/ass-0.879_results.csv',
-        'M2': r'plot_material/ablation_experiment/ass-focus-poolconv-0.886_results.csv',
-        'M3': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.891_results.csv',
-        'M4': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.885_results.csv',
-        'M5(ALSS-YOLO)': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.891_results.csv',
+        "YOLOv5-N'": r'plot_material/comparsion_experiment/yolov5-0.876_results.csv',
+        'YOLOv8-ghost': r'plot_material/comparsion_experiment/yolov8-ghost-0.879_results.csv',
+        'YOLOv8-AM': r'plot_material/comparsion_experiment/yolov8_ECA3-0.889_results.csv',
+        'YOLOv8-p2': r'plot_material/comparsion_experiment/yolov8-p2-0.900_results.csv',
+        'ALSS-YOLO-m': r'plot_material/comparsion_experiment/ASS-YOLO-m_results.csv',
+        'ALSS-YOLO': r'plot_material/ablation_experiment/ass-focus-poolconv-atta-iou-0.891_results.csv',
     }
     original_colors = [
         (254, 194, 17),
@@ -117,10 +129,10 @@ def plot_MAP():
     # plt.title('mAP_0.5')
     plt.grid()  # 显示网格线
     plt.legend()
-    fig.savefig("plot_curve/ablation_mAP0.5.png", dpi=520)
+    fig.savefig("plot_curve/Ablation_mAP0.5.png", dpi=520)
 
 
 if __name__ == '__main__':
-    plot_PR()   # 绘制PR
+    # plot_PR()   # 绘制PR
     plot_F1()   # 绘制F1
-    plot_MAP()
+    # plot_MAP()

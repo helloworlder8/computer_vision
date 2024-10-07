@@ -364,7 +364,7 @@ class BaseProject(nn.Module):
         #     x in ARGV for x in ("predict", "track", "mode=predict", "mode=track")
         # )
         # 有什么数据，做什么任务，有什么模型，输入图像尺寸，是不是一个类
-        custom = {"conf": 0.25, "batch": 1, "save": False, "mode": "predict"}  # 人任务模型数据，图单
+        custom = {"conf": 0.3, "batch": 1, "save": False, "mode": "predict"}  # 人任务模型数据，图单
         args = {**self.overrides, **custom, **kwargs}  # highest priority args on the right
         prompts = args.pop("prompts", None)  # for SAM-type models
 

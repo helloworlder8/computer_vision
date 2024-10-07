@@ -1,5 +1,5 @@
 # from ultralytics.data.converter import yolo_points2segment
-from ultralytics.data.converter import yolo_points2segment
+from ultralytics.data.converter import yolo_points2segment,yolo_bbox2segment
 
 # yolo_points2segment(  
 #     im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
@@ -287,42 +287,50 @@ from ultralytics.data.converter import yolo_points2segment
 # )
 
 
+# yolo_points2segment(  
+#     im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
+#     save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam_l_labels",  # saved to "labels-segment" in images directory
+#     sam_model="../checkpoints/sam_l.pt",
+#     num_positive=3,num_negative=8
+# )
+
+
+# yolo_points2segment(
+#     im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
+#     save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_t_labels",  # saved to "labels-segment" in images directory
+#     sam_model="../checkpoints/sam2_t.pt",
+#     num_positive=3,num_negative=8
+# )
+
+# yolo_points2segment(  
+#     im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
+#     save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_s_labels",  # saved to "labels-segment" in images directory
+#     sam_model="../checkpoints/sam2_s.pt",
+#     num_positive=3,num_negative=8
+# )
+
+# yolo_points2segment(  
+#     im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
+#     save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_b_labels",  # saved to "labels-segment" in images directory
+#     sam_model="../checkpoints/sam2_b.pt",
+#     num_positive=3,num_negative=8
+# )
+
+
+
 yolo_points2segment(  
-    im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
-    save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam_l_labels",  # saved to "labels-segment" in images directory
-    sam_model="../checkpoints/sam_l.pt",
-    num_positive=3,num_negative=8
-)
-
-
-yolo_points2segment(
-    im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
-    save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_t_labels",  # saved to "labels-segment" in images directory
-    sam_model="../checkpoints/sam2_t.pt",
-    num_positive=3,num_negative=8
-)
-
-yolo_points2segment(  
-    im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
-    save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_s_labels",  # saved to "labels-segment" in images directory
-    sam_model="../checkpoints/sam2_s.pt",
-    num_positive=3,num_negative=8
-)
-
-yolo_points2segment(  
-    im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
-    save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_b_labels",  # saved to "labels-segment" in images directory
-    sam_model="../checkpoints/sam2_b.pt",
-    num_positive=3,num_negative=8
-)
-
-yolo_points2segment(  
-    im_dir="../datasets/ADE20K_2016_yolo/valid_detect/images",
-    save_dir="../datasets/ADE20K_2016_yolo/valid_segment/3+8_points/sam2_l_labels",  # saved to "labels-segment" in images directory
+    im_dir="../datasets/BANANA1.1/select_dataset/images",
+    save_dir="../datasets/BANANA1.1/select_dataset/1_point/sam2_l_labels",  # saved to "labels-segment" in images directory
     sam_model="../checkpoints/sam2_l.pt",
-    num_positive=3,num_negative=8
+    num_positive=1,num_negative=0
 )
 
+
+yolo_bbox2segment(  
+    im_dir="../datasets/BANANA1.1/select_dataset/images",
+    save_dir="../datasets/BANANA1.1/select_dataset/MBB/sam2_l_labels",  # saved to "labels-segment" in images directory
+    sam_model="../checkpoints/sam2_l.pt",
+)
 # sam_model_map = { #一系列内存空间
 #     "sam_h.pt": build_sam_vit_h, 这个没有官方权重
 #     "sam_l.pt": build_sam_vit_l,

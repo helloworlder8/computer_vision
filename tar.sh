@@ -13,3 +13,6 @@ source_directory="../computer_vision"
 tar --exclude="*.pt" --exclude="$source_directory/checkpoints" --exclude="$source_directory/runs" -czvf "$archive_file" -C "$source_directory" .
 
 echo "Archive created: $archive_file"
+
+
+# alss v8-ghost v6 v8-p6 v8t 

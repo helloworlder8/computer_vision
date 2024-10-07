@@ -79,37 +79,38 @@ current_directory = current_file_path.parent
 data = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
 # data = "coco128.yaml"
 
-model_yaml1='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_CIoU/weights/last.pt'
-model_yaml2='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_DIoU/weights/last.pt'
-model_yaml3='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_EIoU/weights/last.pt'
-model_yaml4='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_GIoU/weights/last.pt'
-model_yaml5='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_SIoU/weights/last.pt'
-model_yaml6='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3_WIoU/weights/last.pt'
+model_yaml1='result/Comparative_experiment_exp/yolov9t-seg_0.849/weights/last.pt'
+model_yaml2="result/Comparative_experiment_exp/yolov8-seg-p6_0.851/weights/last.pt"
+model_yaml3='result/Comparative_experiment_exp/yolov6-seg_0.858/weights/last.pt'
+model_yaml4='result/Comparative_experiment_exp/yolov8-seg-ghost_0.849/weights/last.pt'
+model_yaml5='result/Ablation_experiment_exp/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
+model_yaml6='result/Ablation_experiment_exp/ALSSn-seg-24-MSCAMv3_0.857/weights/last.pt'
+model_yaml7='result/Ablation_experiment_exp/ALSSn-seg-24-MSCAMv3-last_0.858/weights/last.pt'
 
-model_yaml7='run/Comparative_experiment_exp/yolov9t-seg_0.849/weights/last.pt'
+
 model_yaml8='run/Comparative_experiment_exp/yolov10-seg_0.848/weights/last.pt'
 # model_yaml5='run/BANANA-NEW/ALSSn-seg-MSCAM-last_0.916/weights/last.pt'
 
 
-project="BANANA_val"
-name1="GIoU"
-name2="DIoU"
-name3="CIoU"
-name4='EIoU'
-name5='SIoU'
-name6='WIoU'
+project="result"
+name1="yolov9t"
+name2="yolov8-seg-p6"
+name3="yolov6-seg"
+name4='yolov8-seg-ghost'
+name5='ALSSn'
+name6='M5'
+name7='M6'
 
-name7='yolov9t-seg'
 name8='yolov10-seg'
 # 批 模 名
 device='1'
 
 #  CIoU or DIoU or EIoU or SIoU or FineSIoU or WIoU
-IoU1 = "GIoU"
-IoU2 = "DIoU"
-IoU3 = "EIoU"
+IoU1 = "CIoU"
+IoU2 = "CIoU"
+IoU3 = "CIoU"
 IoU4 = "CIoU"
-IoU5 = "SIoU"
-IoU6 = "WIoU"
+IoU5 = "CIoU"
+IoU6 = "CIoU"
 IoU7 = "CIoU"
 IoU8 = "CIoU"

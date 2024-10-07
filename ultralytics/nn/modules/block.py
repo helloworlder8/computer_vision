@@ -74,7 +74,7 @@ class DFL(nn.Module):
 class Proto(nn.Module):
     """YOLOv8 mask Proto module for segmentation models."""
 
-    def __init__(self, c1, c_=256, c2=32): #[256, 256, 32]  分别表示输入通道 中间通道 输出通道
+    def __init__(self, c1, c_=256, c2=32): #[64, 64, 32]  分别表示输入通道 中间通道 输出通道
         """
         Initializes the YOLOv8 mask Proto module with specified number of protos and masks.
 
@@ -88,7 +88,7 @@ class Proto(nn.Module):
 
     def forward(self, x): #torch.Size([2, 64, 80, 80])
         """Performs a forward pass through layers using an upsampled input image."""
-        return self.cv3(self.cv2(self.upsample(self.cv1(x)))) #卷积 上采样 卷积 卷积->torch.Size([2, 256, 160, 160])
+        return self.cv3(self.cv2(self.upsample(self.cv1(x)))) #卷积 上采样 卷积 卷积->torch.Size([2, 32, 160, 160])
 
 
 class HGStem(nn.Module):

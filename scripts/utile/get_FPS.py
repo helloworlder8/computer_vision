@@ -32,7 +32,7 @@ def get_weight_size(path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='run/Ablation_experiment/ALSSn-seg-24-MSCAMv3-last_0.858/weights/last.pt', help='trained weights path')
+    parser.add_argument('--weights', type=str, default='result/Comparative_experiment_exp/yolov10-seg_0.848/weights/last.pt', help='trained weights path')
     parser.add_argument('--batch', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--imgs', nargs='+', type=int, default=[640, 640], help='[height, width] image sizes')
     parser.add_argument('--device', default='3', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')

@@ -13,7 +13,7 @@ def process_model(model_yaml,ch):
     # print(f"\033[1mProcessing model: {model_yaml}\033[0m")
     model_dict = create_model_dict(model_yaml)
     # 创建检测模型
-    detection_model = DetectionModel(model_dict, ch=ch, nc=1, verbose=True)
+    detection_model = DetectionModel(model_dict, ch=ch, nc=1, verbose=False)
     # 融合模型（如果适用）DetectionModel
     print(f"\033[1mProcessing model: {model_yaml}\033[0m")
     detection_model.fuse()
@@ -32,7 +32,7 @@ def process_all_models(directory,ch):
 
 if __name__ == '__main__':
     # model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg.yaml"
-    model_directory = "run/Comparative_experiment/yolov10-depth-seg.yaml"
+    model_directory = "result/Comparative_experiment"
     ch = 3
     # 检查model_directory是文件还是文件夹
     if os.path.isfile(model_directory):

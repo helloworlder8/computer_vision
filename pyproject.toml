@@ -129,8 +129,8 @@ extra = [
 "Source" = "https://github.com/ultralytics/ultralytics/"
 
 [project.scripts]
-yolo = "ultralytics.cfg:entrypoint"
-ultralytics = "ultralytics.cfg:entrypoint"
+yolo = "ultralytics.cfg_yaml:entrypoint"
+ultralytics = "ultralytics.cfg_yaml:entrypoint"
 
 # Tools settings -------------------------------------------------------------------------------------------------------
 [tool.setuptools]  # configuration specific to the `setuptools` build backend.

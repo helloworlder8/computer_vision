@@ -1,9 +1,17 @@
 # 可以一目十行的ultralytics献给宝子们
-
 官方文档 https://docs.ultralytics.com/zh/usage/simple-utilities/?h=yolo_bbox2segment#convert-coco-into-yolo-format
 
 此版本保留所有训练结果
 
+
+
+此版本对应论文《Iterative Optimization Pipeline and ALSS-YOLO-Seg for Efficient Banana Plantation Segmentation in UAV Imagery 》暂定
+消融实验配置参考 result/Ablation_experiment
+对比实验配置参考 result/Comparative_experiment
+最终权重文件 ALSS-YOLO-Seg.pt
+训练验证可视化以及数据转换等脚本 scripts
+
+实验用的数据集下一个版本给出对应链接
 
 ## 文档快速索引
 [评估指标](docs/Metrics.md)
@@ -74,3 +82,7 @@
         plot_mc_curve(x, p_curve, save_dir / f"{prefix}P_curve.png", names, ylabel="Precision", on_plot=on_plot)
         plot_mc_curve(x, r_curve, save_dir / f"{prefix}R_curve.png", names, ylabel="Recall", on_plot=on_plot)
 ```
+
+
+## 预测置信度
+`custom = {"conf": 0.4, "batch": 1, "save": False, "mode": "predict"}`

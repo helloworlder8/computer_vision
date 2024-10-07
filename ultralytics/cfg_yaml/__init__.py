@@ -631,7 +631,7 @@ def entrypoint(debug=""):
             overrides["model"] = TASK2MODEL[task]
 
     # Model
-    model = overrides.pop("model", DEFAULT_CFG.model)
+    model = overrides.pop("model_name", DEFAULT_CFG.model_name)
     if model is None:
         model = "yolov8n.pt"
         LOGGER.warning(f"WARNING ⚠️ 'model' argument is missing. Using default 'model={model}'.")
