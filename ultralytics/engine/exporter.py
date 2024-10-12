@@ -231,7 +231,7 @@ class Exporter:
         # Input
         img = torch.zeros(self.args.batch, 3, *self.imgsz).to(self.device)
         file = Path(
-            getattr(model, "model_pt", None) or getattr(model, "model_yaml", None) or model.yaml.get("model_yaml", "")
+            getattr(model, "model_name", None) or getattr(model, "model_yaml", None) or model.yaml.get("model_yaml", "")
         )
         if file.suffix in {".yaml", ".yml"}:
             file = Path(file.name)
@@ -267,7 +267,7 @@ class Exporter:
         self.img = img
         self.model = model
         self.file = file
-        self.output_shape = (
+        self.output_shape = ( #((1, 116, 8400), (1, 32, 160, 160))  116解析 80类 4dbox 32maskconf
             tuple(y.shape)
             if isinstance(y, torch.Tensor)
             else tuple(tuple(x.shape if isinstance(x, torch.Tensor) else []) for x in y)

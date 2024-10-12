@@ -5,7 +5,7 @@
 
 
 
-此版本对应论文《Iterative Optimization Pipeline and ALSS-YOLO-Seg for Efficient Banana Plantation Segmentation in UAV Imagery 》暂定
+此版本对应论文《Iterative Optimization Annotation Pipeline and ALSS-YOLO-Seg for Efficient Banana Plantation Segmentation in UAV Imagery 》暂定
 消融实验配置参考 result/Ablation_experiment
 对比实验配置参考 result/Comparative_experiment
 最终权重文件 ALSS-YOLO-Seg.pt
@@ -16,7 +16,7 @@
 ## 文档快速索引
 [评估指标](docs/Metrics.md)
 
-
+[显示](docs/Display.md)
 
 
 ## 以通过测试的部分
@@ -24,7 +24,7 @@
 
 
 
-## 重要函数汇总
+## 重要函数汇总（重点在训练）
 
 
 ### 训练入口
@@ -75,13 +75,6 @@
 ## 分割头
 `elif m in {Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}`
 
-## 画图
-```python
-        plot_pr_curve(x, prec_values, ap, save_dir / f"{prefix}PR_curve.png", names, on_plot=on_plot)
-        plot_mc_curve(x, f1_curve, save_dir / f"{prefix}F1_curve.png", names, ylabel="F1", on_plot=on_plot)
-        plot_mc_curve(x, p_curve, save_dir / f"{prefix}P_curve.png", names, ylabel="Precision", on_plot=on_plot)
-        plot_mc_curve(x, r_curve, save_dir / f"{prefix}R_curve.png", names, ylabel="Recall", on_plot=on_plot)
-```
 
 
 ## 预测置信度

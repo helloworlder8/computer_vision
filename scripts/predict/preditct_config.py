@@ -22,7 +22,7 @@ name4='ass-focus-poolconv-atta-iou-0.885'
 name5='ass-focus-poolconv-atta-iou-0.891'
 name6='yolov8-width'
 # 批 模 名
-device='2'
+device='0'
 
 source = 'Recycle_Bin'
 
