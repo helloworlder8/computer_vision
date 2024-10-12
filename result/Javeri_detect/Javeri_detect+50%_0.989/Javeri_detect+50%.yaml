@@ -1,8 +1,0 @@
-
-train: train_detect+50%/images  # train images (relative to 'path') 128 images   
-val: valid_detect/images  # val images (relative to 'path') 128 images
-test: test_detect/images  # test images (optional)
-nc: 1
-# Classes
-names:
-  0: plantation

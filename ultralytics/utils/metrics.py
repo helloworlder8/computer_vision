@@ -269,7 +269,7 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, EIoU=Fal
                 threshold = 2 ** 0.5 / 2    #阈值
                 sin_best = torch.where(sin_w > threshold, sin_h, sin_w) #根据角度选合适的
 
-                angle_param = torch.cos(torch.arcsin(sin_best) * 2 - math.pi / 2)        #角度成本 0 -》1 1》0
+                angle_param = torch.cos(torch.arcsin(sin_best) * 2 - math.pi / 2)        #角度成本 0 -》0  45 ->1
                 angle_cost = torch.pow(1 - torch.exp(-(0.9847-angle_param)),3)  #5度 角度成本系数
 
                 """ 距离成本  原始  中心差比包围"""

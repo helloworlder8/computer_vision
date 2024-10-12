@@ -1,4 +1,0 @@
-
-Confusion Matrix Values:
-734 113
-130 0

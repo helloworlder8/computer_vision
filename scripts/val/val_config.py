@@ -93,7 +93,7 @@ model_yaml8='run/Comparative_experiment_exp/yolov10-seg_0.848/weights/last.pt'
 
 
 project="result"
-name1="yolov9t"
+name1="yolov8s"
 name2="yolov8-seg-p6"
 name3="yolov6-seg"
 name4='yolov8-seg-ghost'

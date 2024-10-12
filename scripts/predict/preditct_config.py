@@ -28,4 +28,4 @@ source = 'Recycle_Bin'
 
 batch = 2
 
-show_labels = True
+show_labels = False
