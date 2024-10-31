@@ -1,0 +1,1 @@
+class BaseTrainer:-》class DetectionTrainer(BaseTrainer): -》class RTDETRTrainer(DetectionTrainer):
