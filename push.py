@@ -86,30 +86,10 @@ if __name__ == '__main__':
 # git remote add origin https://github.com/helloworlder8/computer_vision.git
 # git branch
 # git add -A
-# git commit -m "24-08-22-ALSS-weight"
+# git commit -m "24-11-13"
 # git push -u origin 24-08-25
 # git config --global --unset http.proxy
 # git config --global --unset https.proxy
 #helloworlder8
 #ghp_3evWUSgNgYio9UWL4H0C6yxqgrU33x4FUlww
 
-# 调试文件
-# launch.json文件
-# {
-#     // 使用 IntelliSense 了解相关属性。 
-#     // 悬停以查看现有属性的描述。
-#     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
-#     "version": "0.2.0",
-#     "configurations": [
-#         {
-#             "name": "Python 调试程序: 当前文件",
-#             "type": "debugpy",
-#             "request": "launch",
-#             "program": "${file}",
-#             "console": "integratedTerminal",
-#             "args": [
-#                 "https://github.com/helloworlder8/ultralytics-8.2.60.git",
-#             ]
-#         }
-#     ]
-# }
