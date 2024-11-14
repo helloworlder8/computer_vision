@@ -557,8 +557,8 @@ class BaseProject(nn.Module):
         """Update the model and configuration after training."""
         if RANK in {-1, 0}:
             model_pt = self.trainer.best if self.trainer.best.exists() else self.trainer.last
-            self.ckpt, model_pt = load_download_model(model_pt)  # load ckpt  下载模型
-            self.model = attribute_assignment(self.ckpt,model_pt)
+            # self.ckpt, model_pt = load_download_model(model_pt)  # load ckpt  下载模型
+            self.ckpt, self.model = attribute_assignment(self.ckpt,model_pt)
             self.overrides = self.model.args
             self.metrics = getattr(self.trainer.validator, "metrics", None)
 

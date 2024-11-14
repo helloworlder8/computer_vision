@@ -757,20 +757,20 @@ def temporary_modules(modules=None, attributes=None):
 
 def load_download_model(model_pt):
     """
-    This function attempts to load a PyTorch model with the torch.load() function. If a ModuleNotFoundError is raised,
-    it catches the error, logs a warning message, and attempts to install the missing module via the
-    check_requirements() function. After installation, the function again attempts to load the model using torch.load().
+    Attempts to load a PyTorch model with torch.load(). If ModuleNotFoundError is raised, installs the missing module
+    and retries the load. Handles specific cases for YOLO models.
 
     Args:
-        weight (str): The file path of the PyTorch model.
+        model_pt (str): File path of the PyTorch model.
 
     Returns:
-        (dict): The loaded PyTorch model.
+        (dict): Loaded PyTorch model and model path.
     """
     from ultralytics.utils.downloads import attempt_download_asset
 
     check_suffix(file=model_pt, suffix=".pt")
-    model_pt = attempt_download_asset(model_pt)  # search online if missing locally
+    model_pt = attempt_download_asset(model_pt)  # Ensure local model file
+
     try:
         with temporary_modules(
             modules={
@@ -779,41 +779,32 @@ def load_download_model(model_pt):
                 "ultralytics.yolo.data": "ultralytics.data",
             },
             attributes={
-                "ultralytics.nn.modules.block.Silence": "torch.nn.Identity",  # YOLOv9e
-                "ultralytics.nn.tasks.YOLOv10DetectionModel": "ultralytics.nn.tasks.DetectionModel",  # YOLOv10
+                "ultralytics.nn.modules.block.Silence": "torch.nn.Identity",
+                "ultralytics.nn.tasks.YOLOv10DetectionModel": "ultralytics.nn.tasks.DetectionModel",
             },
         ):
             ckpt = torch.load(model_pt, map_location="cpu")
 
-    except ModuleNotFoundError as e:  # e.name is missing module name
+    except ModuleNotFoundError as e:
         if e.name == "models":
-            raise TypeError(
-                emojis(
-                    f"ERROR ❌️ {model_pt} appears to be an Ultralytics YOLOv5 model originally trained "
-                    f"with https://github.com/ultralytics/yolov5.\nThis model is NOT forwards compatible with "
-                    f"YOLOv8 at https://github.com/ultralytics/ultralytics."
-                    f"\nRecommend fixes are to train a new model using the latest 'ultralytics' package or to "
-                    f"run a command with an official Ultralytics model, i.e. 'yolo predict model=yolov8n.pt'"
-                )
-            ) from e
+            raise TypeError(emojis(
+                f"ERROR ❌️ {model_pt} appears to be a YOLOv5 model incompatible with YOLOv8."
+                f"\nTrain a new model with 'ultralytics' or use an official model (e.g., 'yolov8n.pt')."
+            )) from e
         LOGGER.warning(
-            f"WARNING ⚠️ {model_pt} appears to require '{e.name}', which is not in Ultralytics requirements."
-            f"\nAutoInstall will run now for '{e.name}' but this feature will be removed in the future."
-            f"\nRecommend fixes are to train a new model using the latest 'ultralytics' package or to "
-            f"run a command with an official Ultralytics model, i.e. 'yolo predict model=yolov8n.pt'"
+            f"WARNING ⚠️ {model_pt} requires '{e.name}', which is missing. Attempting auto-install."
         )
-        check_requirements(e.name)  # install missing module
+        check_requirements(e.name)
         ckpt = torch.load(model_pt, map_location="cpu")
 
     if not isinstance(ckpt, dict):
-        # File is likely a YOLO instance saved with i.e. torch.save(model, "saved_model.pt")
         LOGGER.warning(
-            f"WARNING ⚠️ The file '{model_pt}' appears to be improperly saved or formatted. "
-            f"For optimal results, use model.save('filename.pt') to correctly save YOLO models."
+            f"WARNING ⚠️ '{model_pt}' may be improperly formatted. For best results, use model.save('filename.pt')."
         )
         ckpt = {"model": ckpt.model}
 
-    return ckpt, model_pt  # load
+    return ckpt, model_pt
+
 
 
 def attempt_load_weights(model_pts, device=None, inplace=True, fuse=False):
@@ -1050,7 +1041,10 @@ def create_model_dict(model_yaml):
     #     new_stem = re.sub(r"(\d+)([nslmx])6(.+)?$", r"\1\2-p6\3", model_path.stem)
     #     LOGGER.warning(f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {model_path.stem} to {new_stem}.")
     #     model_path = model_path.with_name(new_stem + model_path.suffix)
-
+    
+# (\d+)：匹配一个或多个数字，(\d+) 是一个捕获组，它会捕获匹配到的数字。
+# ([nslmx])：匹配单个字符，这个字符必须是 n、s、l、m 或 x 中的一个。它也是一个捕获组。
+# (.+)?：匹配任意字符序列（至少一个字符），(.+)? 是一个可选的捕获组，表示这个部分是可选的，即可以有，也可以没有。
     unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(model_path))  # i.e. yolov8x.yaml -> yolov8.yaml
     model_yaml = check_yaml(unified_path, hard=False) or check_yaml(model_path) #生成绝对路经
     model_dict = yaml_load(model_yaml)  # model dict

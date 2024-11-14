@@ -75,11 +75,10 @@ from pathlib import Path
 # 获取当前脚本的相对路径
 current_file_path = Path(__file__)
 current_directory = current_file_path.parent
-# data = str(current_directory / Path('../../../datasets/BIRDSAI-FORE-BACKUP1.1/BIRDSAI-FORE.yaml'))
-data = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
-# data = "coco128.yaml"
+data = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
 
-model_yaml1='result/Comparative_experiment_exp/yolov9t-seg_0.849/weights/last.pt'
+
+model_yaml1='/home/easyits/ang/RM-RDD_EXP/yolo11x4/weights/best.pt'
 model_yaml2="result/Comparative_experiment_exp/yolov8-seg-p6_0.851/weights/last.pt"
 model_yaml3='result/Comparative_experiment_exp/yolov6-seg_0.858/weights/last.pt'
 model_yaml4='result/Comparative_experiment_exp/yolov8-seg-ghost_0.849/weights/last.pt'
@@ -92,18 +91,18 @@ model_yaml8='run/Comparative_experiment_exp/yolov10-seg_0.848/weights/last.pt'
 # model_yaml5='run/BANANA-NEW/ALSSn-seg-MSCAM-last_0.916/weights/last.pt'
 
 
-project="result"
-name1="yolov8s"
+project="../RM-RDD_EXP"
+name1="yolo11x-val"
+
 name2="yolov8-seg-p6"
 name3="yolov6-seg"
 name4='yolov8-seg-ghost'
 name5='ALSSn'
 name6='M5'
 name7='M6'
-
 name8='yolov10-seg'
 # 批 模 名
-device='1'
+device='0'
 
 #  CIoU or DIoU or EIoU or SIoU or FineSIoU or WIoU
 IoU1 = "CIoU"

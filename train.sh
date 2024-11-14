@@ -1,6 +1,6 @@
 # python scripts/train/train2.py; 
 # python scripts/utile/0_box_point_SAM.py
-python scripts/train/train1.py; 
+# python scripts/train/train1.py; 
 python scripts/train/train2.py; 
 python scripts/train/train3.py; 
 python scripts/train/train4.py; 
@@ -14,5 +14,5 @@ python scripts/train/train6.py;
 # screen -S test
 # screen -ls
 # 关闭 ctrl+a+d
-# 重新打开 screen -r 3029469.test 
-# screen -X -S 3029469.test quit
+# 重新打开 screen -r 1461939.test 
+# screen -X -S 677616.test quit

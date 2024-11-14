@@ -71,7 +71,7 @@ class PoseValidator(DetectionValidator):
             multi_label=True,
             agnostic=self.args.single_cls,
             max_det=self.args.max_det,
-            num_cls=self.nc,
+            nc=self.nc,
         )
 
     def init_metrics(self, model):

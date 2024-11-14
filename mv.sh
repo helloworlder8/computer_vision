@@ -21,3 +21,5 @@ for dir in "${directories[@]}"; do
         echo "移动失败: $dir"
     fi
 done
+
+

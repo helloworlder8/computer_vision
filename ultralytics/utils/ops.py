@@ -166,7 +166,7 @@ def nms_rotated(boxes, scores, threshold=0.45):
         #     multi_label=True,
         #     agnostic=self.args.single_cls,
         #     max_det=self.args.max_det,
-        #     num_cls=self.num_cls,
+        #     nc=self.nc,
         # )
 # def non_max_suppression(
 #     preds,
@@ -177,7 +177,7 @@ def nms_rotated(boxes, scores, threshold=0.45):
 #     multi_label=False,
 #     labels=(),
 #     max_det=300,
-#     num_cls=0,  # number of classes (optional)
+#     nc=0,  # number of classes (optional)
 #     max_time_img=0.05,
 #     max_nms=30000,
 #     max_wh=7680,
@@ -202,15 +202,15 @@ def nms_rotated(boxes, scores, threshold=0.45):
 #     #     return output
 
 #     batch_size = preds.shape[0]  # batch size (BCN, i.e. 1,84,6300)
-#     num_cls = num_cls or (preds.shape[1] - 4)  # number of classes
-#     num_masks = preds.shape[1] - num_cls - 4  # number of masks
-#     mask_index = 4 + num_cls  # mask start index
+#     nc = nc or (preds.shape[1] - 4)  # number of classes
+#     num_masks = preds.shape[1] - nc - 4  # number of masks
+#     mask_index = 4 + nc  # mask start index
 #     conf_TF = preds[:, 4:mask_index].amax(1) > conf  # candidates torch.Size([2, 84, 3528])->torch.Size([2, 3528])置信度
 #     # preds数据格式xyxy 各各类别置信度
 #     # Settings
 #     # min_wh = 2  # (pixels) minimum box width and height
 #     time_limit = 2.0 + max_time_img * batch_size  # seconds to quit after
-#     multi_label &= num_cls > 1  # multiple labels per box (adds 0.5ms/img)
+#     multi_label &= nc > 1  # multiple labels per box (adds 0.5ms/img)
 
 #     preds = preds.transpose(-1, -2)  # torch.Size([2, 84, 3528]) to torch.Size([2, 3528, 84])
 #     if not rotated:
@@ -232,7 +232,7 @@ def nms_rotated(boxes, scores, threshold=0.45):
 #         # Cat apriori labels if autolabelling
 #         if labels and len(labels[img_index]) and not rotated:
 #             lb = labels[img_index]
-#             v = torch.zeros((len(lb), num_cls + num_masks + 4), device=x.device)
+#             v = torch.zeros((len(lb), nc + num_masks + 4), device=x.device)
 #             v[:, :4] = xywh2xyxy(lb[:, 1:5])  # box
 #             v[range(len(lb)), lb[:, 0].long() + 4] = 1.0  # cls
 #             x = torch.cat((x, v), 0)
@@ -242,7 +242,7 @@ def nms_rotated(boxes, scores, threshold=0.45):
 #             continue
 
 #         # 数据格式 xyxy 各类别置信度 掩膜数目
-#         pd_box, pd_cls, pd_mask = pred.split((4, num_cls, num_masks), 1) #torch.Size([306, 4]) torch.Size([306, 80]) torch.Size([306, 0])
+#         pd_box, pd_cls, pd_mask = pred.split((4, nc, num_masks), 1) #torch.Size([306, 4]) torch.Size([306, 80]) torch.Size([306, 0])
 #                                                                  #2表示剩下两个框
 #         if multi_label:
 #             boxes_index, cls_index = torch.where(pd_cls > conf) ##torch.Size([407, 4])
@@ -302,7 +302,7 @@ def non_max_suppression(
     multi_label=False, 
     labels=(), 
     max_det=300, 
-    num_cls=0,  
+    nc=0,  
     max_time_img=0.05, 
     max_nms=30000, 
     max_wh=7680, 
@@ -320,13 +320,13 @@ def non_max_suppression(
         classes = torch.tensor(classes, device=preds.device)
 
     batch_size = preds.shape[0]
-    num_cls = num_cls or (preds.shape[1] - 4)
-    num_masks = preds.shape[1] - num_cls - 4
-    mask_index = 4 + num_cls
+    nc = nc or (preds.shape[1] - 4)
+    num_masks = preds.shape[1] - nc - 4
+    mask_index = 4 + nc
     conf_TF = preds[:, 4:mask_index].amax(1) > conf #批 (类框) 点torch.Size([4, 84, 4851])->  torch.Size([2, 3528]) 
 
     time_limit = 2.0 + max_time_img * batch_size
-    multi_label &= num_cls > 1
+    multi_label &= nc > 1
 
     preds = preds.transpose(-1, -2)
 
@@ -341,7 +341,7 @@ def non_max_suppression(
 
         if labels and len(labels[img_index]) and not rotated:
             lb = labels[img_index]
-            v = torch.zeros((len(lb), num_cls + num_masks + 4), device=pred.device)
+            v = torch.zeros((len(lb), nc + num_masks + 4), device=pred.device)
             v[:, :4] = xywh2xyxy(lb[:, 1:5])
             v[range(len(lb)), lb[:, 0].long() + 4] = 1.0
             pred = torch.cat((pred, v), 0)
@@ -349,7 +349,7 @@ def non_max_suppression(
         if not pred.shape[0]:
             continue
 
-        pd_box, pd_cls, pd_mask = pred.split((4, num_cls, num_masks), 1) #4 80 32
+        pd_box, pd_cls, pd_mask = pred.split((4, nc, num_masks), 1) #4 80 32
 
         if multi_label: #同一个bbox多个类别
             boxes_index, cls_index = torch.where(pd_cls > conf)

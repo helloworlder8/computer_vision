@@ -953,8 +953,8 @@ class SettingsManager(dict):
         from ultralytics.utils.checks import check_version
         from ultralytics.utils.torch_utils import torch_distributed_zero_first
 
-        root = GIT_DIR or Path()
-        datasets_root = (root.parent if GIT_DIR and is_dir_writeable(root.parent) else root).resolve()
+        root = Path()
+        datasets_root = root.parent if is_dir_writeable(root.parent) else root.resolve()
 
         self.file = Path(file)
         self.version = version

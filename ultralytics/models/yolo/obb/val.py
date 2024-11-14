@@ -43,7 +43,7 @@ class OBBValidator(DetectionValidator):
             self.args.conf,
             self.args.NMS_Threshold,
             labels=self.lb,
-            num_cls=self.nc,
+            nc=self.nc,
             multi_label=True,
             agnostic=self.args.single_cls,
             max_det=self.args.max_det,

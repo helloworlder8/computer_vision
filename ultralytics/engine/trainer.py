@@ -58,72 +58,20 @@ FILE = Path(__file__).resolve()
 ROOT = FILE.parents[2]  # YOLO
 
 class BaseTrainer:
-    """
-    BaseTrainer.
-
-    A base class for creating trainers.
-
-    Attributes:
-        args (SimpleNamespace): Configuration for the trainer.
-        validator (BaseValidator): Validator instance.
-        model (nn.Module): Model instance.
-        callbacks (defaultdict): Dictionary of callbacks.
-        save_dir (Path): Directory to save results.
-        wdir (Path): Directory to save weights.
-        last (Path): Path to the last checkpoint.
-        best (Path): Path to the best checkpoint.
-        save_period (int): Save checkpoint every x epochs (disabled if < 1).
-        batch_size (int): Batch size for training.
-        epochs (int): Number of epochs to train for.
-        start_epoch (int): Starting current_epoch for training.
-        device (torch.device): Device to use for training.
-        amp (bool): Flag to enable AMP (Automatic Mixed Precision).
-        scaler (amp.GradScaler): Gradient scaler for AMP.
-        data (str): Path to data.
-        trainset (torch.utils.data.Dataset): Training dataset.
-        testset (torch.utils.data.Dataset): Testing dataset.
-        ema (nn.Module): EMA (Exponential Moving Average) of the model.
-        resume (bool): Resume training from a checkpoint.
-        lf (nn.Module): Loss function.
-        scheduler (torch.optim.lr_scheduler._LRScheduler): Learning rate scheduler.
-        best_fitness (float): The best fitness value achieved.
-        fitness (float): Current fitness value.
-        loss (float): Current loss value.
-        loss_items (float): Total loss value.
-        loss_names (list): List of loss names.
-        csv (Path): Path to results CSV file.
-    """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
-        """
-        Initializes the BaseTrainer class.
 
-        Args:
-            cfg (str, optional): Path to a configuration file. Defaults to DEFAULT_CFG.
-            overrides (dict, optional): Configuration overrides. Defaults to None.
-        """
-        self._init_args(cfg, overrides) #大参数
-        self._init_dirs()
-        self._init_device()
-        with torch_distributed_zero_first(RANK):
-            self.trainset, self.testset = self.create_data_dict_dataset_str()
-        self.ema = None
-        self._init_training_params()
-        self._init_optimization_utils()
-        self._init_epoch_metrics()
-        self._init_hub()
-        self._init_callbacks(_callbacks)
-
-    def _init_args(self, cfg, overrides):
-        """Initialize arguments."""
         self.args = get_args(cfg, overrides) #大参数
-        self.check_resume(overrides)
-
-    def _init_device(self):
-        """Initialize device."""
         self.device = select_device(self.args.device, self.args.batch)
         if self.device.type in {"cpu", "mps"}:
             self.args.workers = 0
+        with torch_distributed_zero_first(RANK):
+            self.trainset, self.testset = self._create_data_dict()
+        self.check_resume(overrides) #overrides用来设置属性
+        self._init_dirs()
+        self._init_training_params()
+        self._init_epoch_metrics()
+        self._init_callbacks(_callbacks)
 
     def _init_dirs(self): #权重路径和训练参数
         """Initialize directories."""
@@ -169,11 +117,11 @@ class BaseTrainer:
         self.metrics_value = None
         self.plots = {}
         self.val_interval_counter = 0  
-        
-    def _init_optimization_utils(self):
-        """Initialize optimization utilities."""
         self.lf = None
         self.scheduler = None
+        self.ema = None
+        """Initialize hub."""
+        self.hub_session = None
 
     def _init_epoch_metrics(self):
         """Initialize current_epoch level metrics."""
@@ -185,9 +133,6 @@ class BaseTrainer:
         self.csv = self.save_dir / "results.csv"
         self.plot_idx = [0, 1, 2]
 
-    def _init_hub(self):
-        """Initialize hub."""
-        self.hub_session = None
 
     def _init_callbacks(self, _callbacks):
         """Initialize callbacks."""
@@ -279,6 +224,28 @@ class BaseTrainer:
             world_size=world_size,
         )
 
+
+    def _freeze_layers(self):
+  
+        # Determine freeze list
+        freeze_list = (
+            self.args.freeze if isinstance(self.args.freeze, list) else range(self.args.self.args.freeze) if isinstance(self.args.freeze, int) else []
+        )
+        always_freeze_names = [".dfl"]  # Always freeze these layers
+        freeze_layer_names = [f"model.{x}." for x in freeze_list] + always_freeze_names
+
+        # Freeze or unfreeze layers based on requirements
+        for name, param in self.model.named_parameters():
+            if any(freeze_name in name for freeze_name in freeze_layer_names):
+                LOGGER.info(f"Freezing layer '{name}'")
+                param.requires_grad = False
+            elif not param.requires_grad and param.dtype.is_floating_point:
+                LOGGER.info(
+                    f"WARNING ⚠️ setting 'requires_grad=True' for previously frozen layer '{name}'. "
+                    "See ultralytics.engine.trainer for customization of frozen layers."
+                )
+                param.requires_grad = True
+
     def _setup_model_dataloaders_optimizer(self, world_size):
         """Builds dataloaders and optimizer on correct rank process."""
 
@@ -288,27 +255,8 @@ class BaseTrainer:
         self.model = self.model.to(self.device)
         self.set_model_attributes()
 
-        # Freeze layers
-        freeze_list = (
-            self.args.freeze
-            if isinstance(self.args.freeze, list)
-            else range(self.args.freeze)
-            if isinstance(self.args.freeze, int)
-            else []
-        )
-        always_freeze_names = [".dfl"]  # always freeze these layers
-        freeze_layer_names = [f"model.{x}." for x in freeze_list] + always_freeze_names
-        for k, v in self.model.named_parameters():
-            # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
-            if any(x in k for x in freeze_layer_names):
-                LOGGER.info(f"Freezing layer '{k}'")
-                v.requires_grad = False
-            elif not v.requires_grad and v.dtype.is_floating_point:  # only floating point Tensor can require gradients
-                LOGGER.info(
-                    f"WARNING ⚠️ setting 'requires_grad=True' for frozen layer '{k}'. "
-                    "See ultralytics.engine.trainer for customization of frozen layers."
-                )
-                v.requires_grad = True
+        self._freeze_layers()
+
 
         # Check AMP
         self.amp = torch.tensor(self.args.amp).to(self.device)  # True or False
@@ -319,11 +267,11 @@ class BaseTrainer:
         if RANK > -1 and world_size > 1:  # DDP
             dist.broadcast(self.amp, src=0)  # broadcast the tensor from rank 0 to all other ranks (returns None)
         self.amp = bool(self.amp)  # as boolean
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp)
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp) #警告
         if world_size > 1:
             self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[RANK], find_unused_parameters=False)
 
-        # Check imgsz
+        # Check imgsz9
         gs = max(int(self.model.stride.max() if hasattr(self.model, "stride") else 32), 32)  # grid size (max stride)
         self.args.imgsz = check_imgsz(self.args.imgsz, stride=gs, floor=gs, max_dim=1)
         self.stride = gs  # for multiscale training
@@ -595,12 +543,8 @@ class BaseTrainer:
         if (self.save_period > 0) and (self.current_epoch > 0) and (self.current_epoch % self.save_period == 0):
             (self.wdir / f"current_epoch{self.current_epoch}.pt").write_bytes(serialized_ckpt)  # save current_epoch, i.e. 'epoch3.pt'
 
-    def create_data_dict_dataset_str(self):
-        """
-        Get train, val path from data dict if it exists.
+    def _create_data_dict(self):
 
-        Returns None if data format is not recognized.
-        """
         try:
             if self.args.task == "classify":
                 data_dict = check_cls_dataset(self.args.data)
@@ -622,8 +566,8 @@ class BaseTrainer:
         """Load/create/download model for any task."""
         if hasattr(self, 'model') and isinstance(self.model, torch.nn.Module):  # if self has model attribute and it's an instance of torch.nn.Module
             return #直接有模型情况
-
-        cfg, weights = self.model_name, None #这个是yaml文件情况
+        weights = None
+        cfg = None #这个是yaml文件情况
         ckpt = None
         if str(self.model_name).endswith(".pt"):
             ckpt, weights = attribute_assignment(ckpt,self.model_name)

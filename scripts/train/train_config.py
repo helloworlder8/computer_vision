@@ -1,51 +1,65 @@
 
+
 from pathlib import Path
 
 # 获取当前脚本的相对路径
 current_file_path = Path(__file__)
 current_directory = current_file_path.parent
-# data = str(current_directory / Path('../../../datasets/Javeri_det_seg/Javeri_detect_in.yaml'))
-data1 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yaml'))
-data2 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yaml'))
-data3 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yaml'))
-data4 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yamll'))
-data5 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yaml'))
-data6 = str(current_directory / Path('../../../datasets/RDD/BU-RDD.yaml'))
-data7 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
-data8 = str(current_directory / Path('../../../datasets/BANANA1.1/BANANA1.1.yaml'))
+data1 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD.yaml'))
+data2 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data3 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data4 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data5 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data6 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data7 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data8 = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
 
 
-model_yaml1="yolov8s.yaml"
-model_yaml2="yolov9s.yaml"
+# data1 = "coco8.yaml"
+# data2 = "coco8.yaml"
+# data3 = "coco8.yaml"
+# data4 = "coco8.yaml"
+# data5 = "coco8.yaml"
+# data6 = "coco8.yaml"
+# data7 = "coco8.yaml"
+# data8 = "coco8.yaml"
+
+
+model_yaml1="yolo11s.yaml"
+model_yaml2="yolo11s.yaml"
 model_yaml3="yolov10s.yaml"
-model_yaml4='yolov6s.yaml'
-model_yaml5='yolov5s.yaml'
+model_yaml4='yolov9s.yaml'
+model_yaml5='yolov8s.yaml'
 model_yaml6='yolov3.yaml'
+
 model_yaml7='run/Comparative_experiment/yolov9t-seg.yaml'
 model_yaml8='run/Comparative_experiment/yolov10-seg.yaml'
 
 # task='segment'
 task='detect'
 
-project="BU-RDD"
+project="../RM-RDD_EXP_temp"
 
-name1="yolov8s"
-name2="yolov9s"
+name1="yolo11s_manual"
+name2="yolo11s"
 name3="yolov10s"
-name4='yolov6s'
-name5='yolov5s'
+name4='yolov9s'
+name5='yolov8s'
 name6='yolov3'
+
+
 
 name7='yolov9t-seg'
 name8='yolov10-seg'
 
 # 批 模 名
-batch1=300
-batch2=300
-batch3=300
-batch4=300
-batch5=300
-batch6=300
+batch1=-1
+batch2=-1
+batch3=-1
+batch4=-1
+batch5=-1
+batch6=-1
+
 batch7=-1
 batch8=-1
 
@@ -61,10 +75,10 @@ IoU7 = "CIoU"
 IoU8 = "CIoU"
 
 
-val_interval=10
+val_interval=5
 resume=False
-device='0,1,2'
-epochs=300
+device='0'
+epochs=200
 patience=30
 
 

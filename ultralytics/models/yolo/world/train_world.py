@@ -64,7 +64,7 @@ class WorldTrainerFromScratch(WorldTrainer):
         ]
         return YOLOConcatDataset(dataset) if len(dataset) > 1 else dataset[0]
 
-    def create_data_dict_dataset_str(self):
+    def _create_data_dict(self):
         """
         Get train, val path from data dict if it exists.
 

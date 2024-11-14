@@ -35,7 +35,7 @@ class OBBPredictor(DetectionPredictor):
             self.args.NMS_Threshold,
             agnostic=self.args.agnostic_nms,
             max_det=self.args.max_det,
-            num_cls=len(self.model.names),
+            nc=len(self.model.names),
             classes=self.args.classes,
             rotated=True,
         )
