@@ -68,7 +68,14 @@ def smart_inference_mode():
 
     return decorate
 
+def autocast(enabled: bool, device: str = "cuda"):
 
+    if TORCH_1_13:
+        return torch.amp.autocast(device, enabled=enabled)
+    else:
+        return torch.cuda.amp.autocast(enabled)
+    
+    
 def get_cpu_info():
     """Return a string with system CPU information, i.e. 'Apple M2'."""
     import cpuinfo  # pip install py-cpuinfo

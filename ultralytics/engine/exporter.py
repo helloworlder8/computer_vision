@@ -68,7 +68,7 @@ from ultralytics.cfg_yaml import TASK2DATA, get_args
 from ultralytics.data import build_dataloader
 from ultralytics.data.dataset import YOLODataset
 from ultralytics.data.utils import check_cls_dataset, check_det_dataset
-from ultralytics.nn.autobackend import check_class_names, default_class_names
+from ultralytics.nn.autobackend import check_data_dict_names, default_class_names
 from ultralytics.nn.modules import C2f, Detect, RTDETRDecoder
 from ultralytics.nn.tasks import DetectionModel, SegmentationModel, WorldModel
 from ultralytics.utils import (
@@ -195,7 +195,7 @@ class Exporter:
         # Checks
         if not hasattr(model, "names"):
             model.names = default_class_names()
-        model.names = check_class_names(model.names)
+        model.names = check_data_dict_names(model.names)
         if self.args.half and self.args.int8:
             LOGGER.warning("WARNING ⚠️ half=True and int8=True are mutually exclusive, setting half=False.")
             self.args.half = False

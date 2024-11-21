@@ -1455,36 +1455,7 @@ class Metric(SimpleClass):
 
 
 class DetMetrics(SimpleClass):
-    """
-    This class is a utility class for computing detection metrics such as precision, recall, and mean average precision
-    (mAP) of an object detection model.
 
-    Args:
-        save_dir (Path): A path to the directory where the output plots will be saved. Defaults to current directory.
-        plot (bool): A flag that indicates whether to plot precision-recall curves for each class. Defaults to False.
-        on_plot (func): An optional callback to pass plots path and data when they are rendered. Defaults to None.
-        names (tuple of str): A tuple of strings that represents the names of the classes. Defaults to an empty tuple.
-
-    Attributes:
-        save_dir (Path): A path to the directory where the output plots will be saved.
-        plot (bool): A flag that indicates whether to plot the precision-recall curves for each class.
-        on_plot (func): An optional callback to pass plots path and data when they are rendered.
-        names (tuple of str): A tuple of strings that represents the names of the classes.
-        box (Metric): An instance of the Metric class for storing the results of the detection metrics.
-        speed (dict): A dictionary for storing the execution time of different parts of the detection process.
-
-    Methods:
-        process(tp, conf, pd_cls, gt_cls): Updates the metric results with the latest batch of predictions.
-        keys: Returns a list of keys for accessing the computed detection metrics.
-        mean_results: Returns a list of mean values for the computed detection metrics.
-        class_result(i): Returns a list of values for the computed detection metrics for a specific class.
-        maps: Returns a dictionary of mean average precision (mAP) values for different IoU thresholds.
-        fitness: Computes the fitness score based on the computed detection metrics.
-        ap_class_index: Returns a list of class indices sorted by their average precision (AP) values.
-        results_dict: Returns a dictionary that maps detection metric keys to their computed values.
-        curves: TODO
-        curves_results: TODO
-    """
 
     def __init__(self, save_dir=Path("."), plot=False, on_plot=None, names=()) -> None:
         """Initialize a DetMetrics instance with a save directory, plot flag, callback function, and class names."""
@@ -1869,7 +1840,7 @@ class ClassifyMetrics(SimpleClass):
         """Returns a dictionary with model's performance metrics and fitness score."""
         return dict(zip(self.keys + ["fitness"], [self.top1, self.top5, self.fitness]))
 
-    @property
+    @property #直接使用
     def keys(self):
         """Returns a list of keys for the results_dict property."""
         return ["metrics/accuracy_top1", "metrics/accuracy_top5"]

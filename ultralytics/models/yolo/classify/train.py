@@ -72,14 +72,14 @@ class ClassificationTrainer(BaseTrainer):
         ClassificationModel.reshape_outputs(self.model, self.data["nc"])
         return ckpt
 
-    def build_dataset(self, img_path, mode="train"):
+    def _build_dataset(self, img_path, mode="train"):
         """Creates a ClassificationDataset instance given an image path, and mode (train/test etc.)."""
         return ClassificationDataset(root=img_path, args=self.args, augment=mode == "train", prefix=mode)
 
     def get_dataloader(self, dataset_str, batch_size=16, rank=0, mode="train"):
         """Returns PyTorch DataLoader with transforms to preprocess images for inference."""
         with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
-            dataset = self.build_dataset(dataset_str, mode)
+            dataset = self._build_dataset(dataset_str, mode)
 
         loader = build_dataloader(dataset, batch_size, self.args.workers, rank=rank)
         # Attach inference transforms
@@ -90,7 +90,7 @@ class ClassificationTrainer(BaseTrainer):
                 self.model.transforms = loader.dataset.torch_transforms
         return loader
 
-    def _normalize_img(self, batch):
+    def _train_data_preprocess(self, batch):
         """Preprocesses a batch of images and classes."""
         batch["img"] = batch["img"].to(self.device)
         batch["cls"] = batch["cls"].to(self.device)
@@ -106,7 +106,7 @@ class ClassificationTrainer(BaseTrainer):
             "Size",
         )
 
-    def generate_loss_names_and_validator(self):
+    def _get_loss_names_validator(self):
         """Returns an instance of ClassificationValidator for validation."""
         self.loss_names = ["loss"]
 

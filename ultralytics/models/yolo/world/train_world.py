@@ -44,7 +44,7 @@ class WorldTrainerFromScratch(WorldTrainer):
             overrides = {}
         super().__init__(cfg, overrides, _callbacks)
 
-    def build_dataset(self, img_path, mode="train", batch=None):
+    def _build_dataset(self, img_path, mode="train", batch=None):
         """
         Build YOLO Dataset.
 

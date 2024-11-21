@@ -36,11 +36,12 @@ from ultralytics.utils import (
     emojis,
     yaml_save,
 )
-from ultralytics.utils.autobatch import check_train_batch_size
+from ultralytics.utils.autobatch import auto_batch_size
 from ultralytics.utils.checks import check_amp, check_file, check_imgsz, check_model_file_from_stem, print_args
 from ultralytics.utils.dist import ddp_cleanup, generate_ddp_command
 from ultralytics.utils.files import get_latest_run
 from ultralytics.utils.torch_utils import (
+    TORCH_2_4,
     EarlyStopping,
     ModelEMA,
     convert_optimizer_state_dict_to_fp16,
@@ -66,12 +67,17 @@ class BaseTrainer:
         if self.device.type in {"cpu", "mps"}:
             self.args.workers = 0
         with torch_distributed_zero_first(RANK):
-            self.trainset, self.testset = self._create_data_dict()
-        self.check_resume(overrides) #overrides用来设置属性
+            self._check_download_dataset()
+            self.trainset = self.data_dict["train"]
+            self.testset = self.data_dict.get("val") or self.data_dict.get("test")
+        self._check_resume(overrides) #overrides用来设置属性
         self._init_dirs()
         self._init_training_params()
         self._init_epoch_metrics()
         self._init_callbacks(_callbacks)
+        if RANK == -1:
+            print_args(vars(self.args))
+
 
     def _init_dirs(self): #权重路径和训练参数
         """Initialize directories."""
@@ -79,9 +85,6 @@ class BaseTrainer:
         self.args.name = self.save_dir.name #增量名
 
         self.args.save_dir = str(self.save_dir)
-
-        if RANK == -1:
-            print_args(vars(self.args))
 
         self.wdir = self.save_dir / "weights"
         if RANK in {-1, 0}:
@@ -246,18 +249,7 @@ class BaseTrainer:
                 )
                 param.requires_grad = True
 
-    def _setup_model_dataloaders_optimizer(self, world_size):
-        """Builds dataloaders and optimizer on correct rank process."""
-
-        # Model
-        self.run_callbacks("on_pretrain_routine_start")
-        ckpt = self._setup_model() #没有模型的话也拿到了模型
-        self.model = self.model.to(self.device)
-        self.set_model_attributes()
-
-        self._freeze_layers()
-
-
+    def _check_AMP(self, world_size):
         # Check AMP
         self.amp = torch.tensor(self.args.amp).to(self.device)  # True or False
         # if self.amp and RANK in {-1, 0}:  # Single-GPU and DDP
@@ -267,39 +259,40 @@ class BaseTrainer:
         if RANK > -1 and world_size > 1:  # DDP
             dist.broadcast(self.amp, src=0)  # broadcast the tensor from rank 0 to all other ranks (returns None)
         self.amp = bool(self.amp)  # as boolean
-        self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp) #警告
+        self.scaler = (
+            torch.amp.GradScaler("cuda", enabled=self.amp) if TORCH_2_4 else torch.cuda.amp.GradScaler(enabled=self.amp)
+        )
         if world_size > 1:
             self.model = nn.parallel.DistributedDataParallel(self.model, device_ids=[RANK], find_unused_parameters=False)
 
-        # Check imgsz9
-        gs = max(int(self.model.stride.max() if hasattr(self.model, "stride") else 32), 32)  # grid size (max stride)
-        self.args.imgsz = check_imgsz(self.args.imgsz, stride=gs, floor=gs, max_dim=1)
-        self.stride = gs  # for multiscale training
 
-        # Batch size
+    def determine_batch_size(self,world_size):
         if self.batch_size < 1 and RANK == -1:  # single-GPU only, estimate best batch size
-            self.args.batch = self.batch_size = check_train_batch_size(
+            self.args.batch = self.batch_size = auto_batch_size(
                 model=self.model,
                 imgsz=self.args.imgsz,
                 amp=self.amp,
                 batch=self.batch_size,
             )
+        return self.batch_size // max(world_size, 1)
 
+    def get_dataloaders_validator(self, batch_size):
         # Dataloaders
-        batch_size = self.batch_size // max(world_size, 1)
-        self.train_loader = self.get_dataloader(self.trainset, batch_size=batch_size, rank=RANK, mode="train")
+        self.train_loader = self.get_dataloader(self.trainset, batch_size=batch_size, rank=RANK, mode="train") #数据路径 batch_size 排名 模式
         if RANK in {-1, 0}:
             # Note: When training DOTA dataset, double batch size could get OOM on images with >2000 objects.
             self.test_loader = self.get_dataloader(
                 self.testset, batch_size=batch_size if self.args.task == "obb" else batch_size * 2, rank=-1, mode="val"
             )
-            self.validator = self.generate_loss_names_and_validator()
+            self.validator = self._get_loss_names_validator()
             metric_keys = self.validator.metrics.keys + self.prefix_loss_items(prefix="val")
             self.metrics_value = dict(zip(metric_keys, [0] * len(metric_keys))) #指标字典
             self.ema = ModelEMA(self.model)
             # if self.args.plots:
             #     self.plot_training_labels() #labels_correlogram.jpg labels.jpg
 
+
+    def optimizer_scheduler(self):
         # Optimizer
         self.accumulate = max(round(self.args.nbs / self.batch_size), 1)  # accumulate loss before optimizing
         weight_decay = self.args.weight_decay * self.batch_size * self.accumulate / self.args.nbs  # scale weight_decay
@@ -312,12 +305,44 @@ class BaseTrainer:
             lr=self.args.lr0,
             momentum=self.args.momentum,
         )
-        # Scheduler
+        self.optimizer.zero_grad()  # zero any resumed gradients to ensure stability on train start
         self._setup_scheduler()
-        self.stopper, self.stop = EarlyStopping(patience=self.args.patience), False
+        
+        
+    def _setup_model_dataloaders_optimizer(self, world_size):
+        """Builds dataloaders and optimizer on correct rank process."""
+
+        # Model
+        self.run_callbacks("on_pretrain_routine_start")
+        ckpt = self._setup_model() #没有模型的话也拿到了模型
+        self.model = self.model.to(self.device)
+        self.set_model_attributes()
+
+        self._freeze_layers()
+
+        self._check_AMP(world_size)
+
+
+        # Check imgsz9
+        self.stride = stride = max(int(self.model.stride.max() if hasattr(self.model, "stride") else 32), 32)  # grid size (max stride)
+        self.args.imgsz = check_imgsz(self.args.imgsz, stride=stride, floor=stride, max_dim=1)
+ 
+
+        # Batch size
+        batch_size =  self.determine_batch_size(world_size)
+
+        
+        self.get_dataloaders_validator(batch_size)
+
+        self.optimizer_scheduler()
+
+        
+        self.stopper, self.stop_flag = EarlyStopping(patience=self.args.patience), False
         self.resume_training(ckpt)
-        self.scheduler.last_epoch = self.start_epoch - 1  # do not move
+        self.scheduler.last_epoch = self.start_epoch - 1 
         self.run_callbacks("on_pretrain_routine_end")
+
+
 
     def _single_card_training(self, world_size=1):
         """Train completed, evaluate and plot if specified by arguments."""
@@ -326,24 +351,22 @@ class BaseTrainer:
         if world_size > 1:
             self._setup_ddp(world_size)
         self._setup_model_dataloaders_optimizer(world_size)
-        self._initialize_training_state(world_size)
-        
-        current_epoch = self.start_epoch
-        self.optimizer.zero_grad()  # zero any resumed gradients to ensure stability on train start
-        
+        self._init_train_state(world_size)
+
+        current_epoch = self.start_epoch 
         while True:
             self._train_epoch_prepare(current_epoch)
             self._train_epoch(world_size, current_epoch)
             self._end_epoch(current_epoch)
-            if self.stop:
+            if self.stop_flag:
                 break
             
             current_epoch += 1
         
-        self._final_eval_plot_results(current_epoch) #画最后的图 模型优化
+        self._final_eval_plot(current_epoch) #评估和画图
         self.run_callbacks("teardown")
 
-    def _initialize_training_state(self, world_size):
+    def _init_train_state(self, world_size):
         """Initialize the state variables and log initial info."""
         self.epoch_batch = len(self.train_loader) #一轮中多少次迭代
         self.nw = max(round(self.args.warmup_epochs * self.epoch_batch), 100) if self.args.warmup_epochs > 0 else -1 #热身多少次迭代
@@ -364,19 +387,19 @@ class BaseTrainer:
 
     def _train_epoch_prepare(self, current_epoch):
         """Prepare for a new training current_epoch."""
-        self.current_epoch = current_epoch
+        self.current_epoch = current_epoch #轮次记录
         self.run_callbacks("on_train_epoch_start")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.scheduler.step()
-        self.model.train()
+        self.model.train() #训练模式
         if RANK != -1:
             self.train_loader.sampler.set_epoch(current_epoch)
-        if current_epoch == (self.total_epochs - self.args.close_mosaic):
+        if current_epoch == (self.total_epochs - self.args.close_mosaic): #关闭马赛克
             self._close_dataloader_mosaic()
             self.train_loader.reset()
         if RANK in {-1, 0}:
-            LOGGER.info(self.progress_string())
+            LOGGER.info(self.progress_string()) #打印 正式加载一批数据
             self.pbar = TQDM(enumerate(self.train_loader), total=self.epoch_batch)
         else:
             self.pbar = enumerate(self.train_loader)
@@ -387,11 +410,12 @@ class BaseTrainer:
         for i, batch in self.pbar:
             self.run_callbacks("on_train_batch_start")
             sum_batch = i + self.epoch_batch * current_epoch
-            self._apply_warmup(sum_batch)
+            if sum_batch <= self.nw:
+                self._apply_warmup(sum_batch)
             
             with torch.cuda.amp.autocast(self.amp):
-                batch = self._normalize_img(batch) #归一化
-                self.loss, self.loss_items = self.model(batch) # imp
+                batch = self._train_data_preprocess(batch) #归一化
+                self.loss, self.loss_items = self.model(batch) # 极重点
                 if RANK != -1:
                     self.loss *= world_size
                 self.avg_loss_items = (self.avg_loss_items * i + self.loss_items) / (i + 1) if self.avg_loss_items is not None else self.loss_items #平均单独损失
@@ -402,7 +426,7 @@ class BaseTrainer:
                 self.optimizer_step()
                 self.last_opt_step = sum_batch
             
-            self._log_plot_batch_progress( batch, sum_batch)
+            self._log_plot( batch, sum_batch)
             self.run_callbacks("on_train_batch_end")
             
             
@@ -417,17 +441,16 @@ class BaseTrainer:
 
     def _apply_warmup(self, sum_batch):
         """Apply learning rate and momentum warmup."""
-        if sum_batch <= self.nw:
-            xi = [0, self.nw]
-            self.accumulate = max(1, int(np.interp(sum_batch, xi, [1, self.args.nbs / self.batch_size]).round()))
-            for j, x in enumerate(self.optimizer.param_groups):
-                x["lr"] = np.interp(
-                    sum_batch, xi, [self.args.warmup_bias_lr if j == 0 else 0.0, x["initial_lr"] * self.lf(self.current_epoch)]
-                )
-                if "momentum" in x:
-                    x["momentum"] = np.interp(sum_batch, xi, [self.args.warmup_momentum, self.args.momentum])
+        xi = [0, self.nw]
+        self.accumulate = max(1, int(np.interp(sum_batch, xi, [1, self.args.nbs / self.batch_size]).round()))
+        for j, x in enumerate(self.optimizer.param_groups):
+            x["lr"] = np.interp(
+                sum_batch, xi, [self.args.warmup_bias_lr if j == 0 else 0.0, x["initial_lr"] * self.lf(self.current_epoch)]
+            )
+            if "momentum" in x:
+                x["momentum"] = np.interp(sum_batch, xi, [self.args.warmup_momentum, self.args.momentum])
 
-    def _log_plot_batch_progress(self, batch, sum_batch):
+    def _log_plot(self, batch, sum_batch):
         """Log the progress of the current batch."""
         mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"
         loss_len = self.avg_loss_items.shape[0] if len(self.avg_loss_items.shape) else 1
@@ -443,39 +466,85 @@ class BaseTrainer:
     def _timed_stopping(self):
         """Check if training time has exceeded the specified limit."""
         if self.args.time:
-            self.stop = (time.time() - self.train_time_start) > (self.args.time * 3600)
+            self.stop_flag = (time.time() - self.train_time_start) > (self.args.time * 3600)
             if RANK != -1:
-                broadcast_list = [self.stop if RANK == 0 else None]
+                broadcast_list = [self.stop_flag if RANK == 0 else None]
                 dist.broadcast_object_list(broadcast_list, 0)
-                self.stop = broadcast_list[0]
-        return self.stop
+                self.stop_flag = broadcast_list[0]
+        return self.stop_flag
 
-    def _end_epoch(self, current_epoch): #验证结果保存权重
-        """Perform end-of-current_epoch operations."""
-        self.lr = {f"lr/pg{ir}": x["lr"] for ir, x in enumerate(self.optimizer.param_groups)} #各组的学习率
-        self.run_callbacks("on_train_epoch_end")
+    # def _end_epoch(self, current_epoch): #验证结果保存权重
+    #     """Perform end-of-current_epoch operations."""
+    #     self.lr = {f"lr/pg{ir}": x["lr"] for ir, x in enumerate(self.optimizer.param_groups)} #各组的学习率
+    #     self.run_callbacks("on_train_epoch_end")
         
-        if RANK in {-1, 0}:
-            final_epoch = current_epoch + 1 >= self.total_epochs #false
-            self.ema.update_attr(self.model, include=["model_dict", "nc", "args", "names", "stride", "class_weights"])
+    #     if RANK in {-1, 0}:
+    #         final_epoch = current_epoch + 1 >= self.total_epochs #false
+    #         self.ema.update_attr(self.model, include=["model_dict", "nc", "args", "names", "stride", "class_weights"])
             
-            self.val_interval_counter += 1
-            if self.args.val and self.args.val_interval == self.val_interval_counter:
-                self.val_interval_counter=0
-                bool_val = True
-            else:
-                bool_val = False
+    #         self.val_interval_counter += 1
+    #         if self.args.val and self.args.val_interval == self.val_interval_counter:
+    #             self.val_interval_counter=0
+    #             bool_val = True
+    #         else:
+    #             bool_val = False
                   
-            if bool_val or final_epoch or self.stopper.possible_stop or self.stop:
-                self.metrics_value, self.fitness = self.validate()
-            self.save_metrics(metrics={**self.prefix_loss_items(self.avg_loss_items), **self.metrics_value, **self.lr})
-            self.stop |= self.stopper(current_epoch + 1, self.fitness) or final_epoch
-            if self.args.time:
-                self.stop |= (time.time() - self.train_time_start) > (self.args.time * 3600)
-            if self.args.save or final_epoch:
-                self.save_model()
-                self.run_callbacks("on_model_save")
+    #         if bool_val or final_epoch or self.stopper.possible_stop or self.stop_flag:
+    #             self.metrics_value, self.fitness = self.validate()
+    #         self.save_metrics(metrics={**self.prefix_loss_items(self.avg_loss_items), **self.metrics_value, **self.lr})
+    #         self.stop_flag |= self.stopper(current_epoch + 1, self.fitness) or final_epoch
+    #         if self.args.time:
+    #             self.stop_flag |= (time.time() - self.train_time_start) > (self.args.time * 3600)
+    #         if self.args.save or final_epoch:
+    #             self.save_model()
+    #             self.run_callbacks("on_model_save")
         
+    #     t = time.time()
+    #     self.epoch_time = t - self.epoch_time_start
+    #     self.epoch_time_start = t
+    #     if self.args.time:
+    #         mean_epoch_time = (t - self.train_time_start) / (current_epoch - self.start_epoch + 1)
+    #         self.total_epochs = self.args.epochs = math.ceil(self.args.time * 3600 / mean_epoch_time)
+    #         self._setup_scheduler()
+    #         self.scheduler.last_epoch = self.current_epoch
+    #         self.stop_flag |= current_epoch >= self.total_epochs
+    #     self.run_callbacks("on_fit_epoch_end")
+    #     gc.collect()
+    #     torch.cuda.empty_cache()
+    #     if RANK != -1:
+    #         broadcast_list = [self.stop_flag if RANK == 0 else None]
+    #         dist.broadcast_object_list(broadcast_list, 0)
+    #         self.stop_flag = broadcast_list[0]
+
+
+
+
+    def validate_save_metrics_model(self, current_epoch):
+        """Handles validation checks and stopping conditions."""
+
+        self.ema.update_attr(self.model, include=["model_dict", "nc", "args", "names", "stride", "class_weights"])
+        
+        final_epoch = current_epoch + 1 >= self.total_epochs 
+        self.val_interval_counter += 1
+        bool_val = self.args.val and self.args.val_interval == self.val_interval_counter
+        if final_epoch or bool_val or  self.stopper.possible_stop or self.stop_flag:
+            self.metrics_value, self.fitness = self.validate()
+            
+        self.lr = {f"lr/pg{ir}": x["lr"] for ir, x in enumerate(self.optimizer.param_groups)}
+        self.save_metrics(metrics={**self.prefix_loss_items(self.avg_loss_items), **self.metrics_value, **self.lr})
+        
+        self.stop_flag |= self.stopper(current_epoch + 1, self.fitness) or final_epoch
+        if self.args.time:
+            self.stop_flag |= (time.time() - self.train_time_start) > (self.args.time * 3600)
+
+        # Save model
+        if self.args.save or final_epoch:
+            self.save_model()
+            self.run_callbacks("on_model_save")
+            
+
+    def handle_time_epoch_update(self, current_epoch):
+        """Handles time tracking and epoch adjustments."""
         t = time.time()
         self.epoch_time = t - self.epoch_time_start
         self.epoch_time_start = t
@@ -484,16 +553,32 @@ class BaseTrainer:
             self.total_epochs = self.args.epochs = math.ceil(self.args.time * 3600 / mean_epoch_time)
             self._setup_scheduler()
             self.scheduler.last_epoch = self.current_epoch
-            self.stop |= current_epoch >= self.total_epochs
+            self.stop_flag |= current_epoch >= self.total_epochs
+
+    def _end_epoch(self, current_epoch):
+        """Main function to handle end-of-epoch operations."""
+        self.run_callbacks("on_train_epoch_end")
+        
+        if RANK in {-1, 0}:  # Proceed with validation and stopping logic if master node
+            self.validate_save_metrics_model(current_epoch)
+        self.handle_time_epoch_update(current_epoch)
         self.run_callbacks("on_fit_epoch_end")
+        
+        # Cleanup and memory management
         gc.collect()
         torch.cuda.empty_cache()
-        if RANK != -1:
-            broadcast_list = [self.stop if RANK == 0 else None]
-            dist.broadcast_object_list(broadcast_list, 0)
-            self.stop = broadcast_list[0]
 
-    def _final_eval_plot_results(self, current_epoch):
+        if RANK != -1:  # Synchronize stop flag across all ranks
+            broadcast_list = [self.stop_flag if RANK == 0 else None]
+            dist.broadcast_object_list(broadcast_list, 0)
+            self.stop_flag = broadcast_list[0]
+
+
+
+
+
+
+    def _final_eval_plot(self, current_epoch):
         """Finalize training and perform any necessary cleanup."""
         if RANK in {-1, 0}:
             LOGGER.info(
@@ -543,41 +628,57 @@ class BaseTrainer:
         if (self.save_period > 0) and (self.current_epoch > 0) and (self.current_epoch % self.save_period == 0):
             (self.wdir / f"current_epoch{self.current_epoch}.pt").write_bytes(serialized_ckpt)  # save current_epoch, i.e. 'epoch3.pt'
 
-    def _create_data_dict(self):
+    # def _create_data_dict(self):
 
+    #     try:
+    #         if self.args.task == "classify":
+    #             data_dict = check_cls_dataset(self.args.data)
+    #         elif self.args.data.split(".")[-1] in {"yaml", "yml"} or self.args.task in {
+    #             "detect",
+    #             "segment",
+    #             "pose",
+    #             "obb",
+    #         }:
+    #             data_dict = check_det_dataset(self.args.data)
+    #             if "data_yaml" in data_dict:
+    #                 self.args.data = data_dict["data_yaml"]  # 给全称
+    #     except Exception as e:
+    #         raise RuntimeError(emojis(f"Dataset '{clean_url(self.args.data)}' error ❌ {e}")) from e
+    #     self.data_dict = data_dict
+    #     return data_dict["train"], data_dict.get("val") or data_dict.get("test")
+
+    def _check_download_dataset(self):
         try:
             if self.args.task == "classify":
-                data_dict = check_cls_dataset(self.args.data)
+                self.data_dict = check_cls_dataset(self.args.data)
             elif self.args.data.split(".")[-1] in {"yaml", "yml"} or self.args.task in {
                 "detect",
                 "segment",
                 "pose",
                 "obb",
             }:
-                data_dict = check_det_dataset(self.args.data)
-                if "data_yaml" in data_dict:
-                    self.args.data = data_dict["data_yaml"]  # 给全称
+                self.data_dict = check_det_dataset(self.args.data)
+                if "data_yaml" in self.data_dict:
+                    self.args.data = self.data_dict["data_yaml"]  # 给全称
         except Exception as e:
             raise RuntimeError(emojis(f"Dataset '{clean_url(self.args.data)}' error ❌ {e}")) from e
-        self.data_dict = data_dict
-        return data_dict["train"], data_dict.get("val") or data_dict.get("test")
-
+        
     def _setup_model(self):
         """Load/create/download model for any task."""
         if hasattr(self, 'model') and isinstance(self.model, torch.nn.Module):  # if self has model attribute and it's an instance of torch.nn.Module
             return #直接有模型情况
         weights = None
-        cfg = None #这个是yaml文件情况
+        cfg = self.model_name #这个是yaml文件情况
         ckpt = None
         if str(self.model_name).endswith(".pt"):
-            ckpt, weights = attribute_assignment(ckpt,self.model_name)
+            ckpt, weights = attribute_assignment(self.model_name)
             if hasattr(weights, 'yaml'):
                 cfg = weights.model_dict = weights.yaml
             else:
                 cfg = weights.model_dict #有预训练权重的情况
-
         elif isinstance(self.args.pretrained, (str, Path)):
             _, weights = attribute_assignment(self.args.pretrained)
+            
         self.model = self.get_model(cfg=cfg, weights=weights, verbose=RANK == -1)  # calls Model(cfg, weights)
         return ckpt
 
@@ -591,7 +692,7 @@ class BaseTrainer:
         if self.ema:
             self.ema.update(self.model)
 
-    def _normalize_img(self, batch):
+    def _train_data_preprocess(self, batch):
         """Allows custom preprocessing model inputs and ground truths depending on task type."""
         return batch
 
@@ -611,17 +712,17 @@ class BaseTrainer:
         """Get model and raise NotImplementedError for loading cfg files."""
         raise NotImplementedError("This task trainer doesn't support loading cfg files")
 
-    def generate_loss_names_and_validator(self):
-        """Returns a NotImplementedError when the generate_loss_names_and_validator function is called."""
-        raise NotImplementedError("generate_loss_names_and_validator function not implemented in trainer")
+    def _get_loss_names_validator(self):
+        """Returns a NotImplementedError when the _get_loss_names_validator function is called."""
+        raise NotImplementedError("_get_loss_names_validator function not implemented in trainer")
 
     def get_dataloader(self, dataset_str, batch_size=16, rank=0, mode="train"):
         """Returns dataloader derived from torch.data.Dataloader."""
         raise NotImplementedError("get_dataloader function not implemented in trainer")
 
-    def build_dataset(self, img_path, mode="train", batch=None):
+    def _build_dataset(self, img_path, mode="train", batch=None):
         """Build dataset."""
-        raise NotImplementedError("build_dataset function not implemented in trainer")
+        raise NotImplementedError("_build_dataset function not implemented in trainer")
 
     def prefix_loss_items(self, loss_items=None, prefix="train"):
         """
@@ -682,7 +783,7 @@ class BaseTrainer:
                     self.metrics_value.pop("fitness", None)
                     self.run_callbacks("on_fit_epoch_end")
 
-    def check_resume(self, overrides): #可以改动的
+    def _check_resume(self, overrides): #可以改动的
         """Check if resume checkpoint exists and update arguments accordingly."""
         resume_pt = self.args.resume_pt
         resume = self.args.resume #默认false
@@ -765,23 +866,7 @@ class BaseTrainer:
             self.train_loader.dataset.close_mosaic(hyp=self.args)
 
     def build_optimizer(self, model, name="auto", lr=0.001, momentum=0.9, decay=1e-5, iterations=1e5):
-        """
-        Constructs an optimizer for the given model, based on the specified optimizer name, learning rate, momentum,
-        weight decay, and number of iterations.
 
-        Args:
-            model (torch.nn.Module): The model for which to build an optimizer.
-            name (str, optional): The name of the optimizer to use. If 'auto', the optimizer is selected
-                based on the number of iterations. Default: 'auto'.
-            lr (float, optional): The learning rate for the optimizer. Default: 0.001.
-            momentum (float, optional): The momentum factor for the optimizer. Default: 0.9.
-            decay (float, optional): The weight decay for the optimizer. Default: 1e-5.
-            iterations (float, optional): The number of iterations, which determines the optimizer if
-                name is 'auto'. Default: 1e5.
-
-        Returns:
-            (torch.optim.Optimizer): The constructed optimizer.
-        """
 
         g = [], [], []  # optimizer parameter groups
         bn = tuple(v for k, v in nn.__dict__.items() if "Norm" in k)  # normalization layers, i.e. BatchNorm2d()

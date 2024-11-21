@@ -291,14 +291,15 @@ class WorldDetect(Detect):
     def __init__(self, nc=80, embed=512, with_bn=False, ch=()):
         """Initialize YOLOv8 detection layer with nc classes and layer channels ch."""
         super().__init__(nc, ch)
-        c3 = max(ch[0], min(self.nc, 100))
-        self.cv3 = nn.ModuleList(nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, embed, 1)) for x in ch)
+        c3 = max(ch[0], min(self.nc, 100)) #128
+        self.cv3 = nn.ModuleList(nn.Sequential(Conv(x, c3, 3), Conv(c3, c3, 3), nn.Conv2d(c3, embed, 1)) for x in ch) #不管什么通道转换成嵌入维度
+        
         self.cv4 = nn.ModuleList(BNContrastiveHead(embed) if with_bn else ContrastiveHead() for _ in ch)
-
+    # torch.Size([4, 128, 80, 80]) torch.Size([4, 256, 40, 40]) torch.Size([4, 512, 20, 20])  torch.Size([4, 80, 512])
     def forward(self, x, text):
         """Concatenates and returns predicted bounding boxes and class probabilities."""
         for i in range(self.nl):
-            x[i] = torch.cat((self.cv2[i](x[i]), self.cv4[i](self.cv3[i](x[i]), text)), 1)
+            x[i] = torch.cat((self.cv2[i](x[i]), self.cv4[i](self.cv3[i](x[i]), text)), 1) #回归信息 分类信息中强制加入文本特征编码然后进行融合 #64 是回归 80是token 合并成144
         if self.training:
             return x
 

@@ -61,30 +61,9 @@ Example:
 
 
 class BasePredictor:
-    """
-    BasePredictor.
-
-    A base class for creating predictors.
-
-    Attributes:
-        args (SimpleNamespace): Configuration for the predictor.
-        save_dir (Path): Directory to save results.
-        done_warmup (bool): Whether the predictor has finished setup.
-        model (nn.Module): Model used for prediction.
-        data (dict): Data configuration.
-        device (torch.device): Device used for prediction.
-        dataset (Dataset): Dataset used for prediction.
-        vid_writer (dict): Dictionary of {save_path: video_writer, ...} writer for saving video output.
-    """
 
     def __init__(self, cfg=DEFAULT_CFG, overrides=None, _callbacks=None):
-        """
-        Initializes the BasePredictor class.
 
-        Args:
-            cfg (str, optional): Path to a configuration file. Defaults to DEFAULT_CFG.
-            overrides (dict, optional): Configuration overrides. Defaults to None.
-        """
         self.args = get_args(cfg, overrides) #预测大参数
         self.save_dir = get_save_dir(self.args)
         if self.args.conf is None:
@@ -197,10 +176,11 @@ class BasePredictor:
             else None
         )
         self.dataset = load_inference_source(
-            source=source,
-            batch=self.args.batch,
-            vid_stride=self.args.vid_stride,
-            buffer=self.args.stream_buffer,
+            source=source, #'ultralytics/assets/bus_640.jpg'
+            batch=self.args.batch, #16
+            vid_stride=self.args.vid_stride, #1
+            buffer=self.args.stream_buffer, #false
+            fraction = self.args.fraction
         )
         self.source_type = self.dataset.source_type
         if not getattr(self, "stream", True) and (

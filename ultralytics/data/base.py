@@ -19,32 +19,6 @@ from ultralytics.utils import DEFAULT_CFG, LOCAL_RANK, LOGGER, NUM_THREADS, TQDM
 
 
 class BaseDataset(Dataset):
-    """
-    Base dataset class for loading and processing image data.
-
-    Args:
-        img_path (str): Path to the folder containing images.
-        imgsz (int, optional): Image size. Defaults to 640.
-        cache (bool, optional): Cache images to RAM or disk during training. Defaults to False.
-        augment (bool, optional): If True, data augmentation is applied. Defaults to True.
-        hyp (dict, optional): Hyperparameters to apply data augmentation. Defaults to None.
-        prefix (str, optional): Prefix to print in log messages. Defaults to ''.
-        rect (bool, optional): If True, rectangular training is used. Defaults to False.
-        batch_size (int, optional): Size of batches. Defaults to None.
-        stride (int, optional): Stride. Defaults to 32.
-        pad (float, optional): Padding. Defaults to 0.0.
-        single_cls (bool, optional): If True, single class training is used. Defaults to False.
-        classes (list): List of included classes. Default is None.
-        fraction (float): Fraction of dataset to utilize. Default is 1.0 (use all data).
-
-    Attributes:
-        im_files (list): List of image file paths.
-        labels (list): List of label data dictionaries.
-        ni (int): Number of images in the dataset.
-        ims (list): List of loaded images.
-        npy_files (list): List of numpy file paths.
-        transforms (callable): Image transformation function.
-    """
 
     def __init__(
         self,
@@ -65,15 +39,19 @@ class BaseDataset(Dataset):
         """Initialize BaseDataset with given configuration and options."""
         super().__init__()
         self.img_path = img_path
-        self.imgsz = imgsz
-        self.augment = augment
-        self.single_cls = single_cls
-        self.prefix = prefix
-        self.fraction = fraction
-        self.im_files = self.get_img_files(self.img_path)
+        self.fraction = fraction #训练数据集比例
+        self.im_files = self.get_img_files()
+        self.prefix = prefix #
+        self.single_cls = single_cls #单类
         self.labels = self.get_labels()
         self.update_labels(include_class=classes)  # single_cls and include_class
         self.ni = len(self.labels)  # number of images
+        
+        self.imgsz = imgsz
+        self.augment = augment
+
+
+
         self.rect = rect
         self.batch_size = batch_size
         self.stride = stride
@@ -103,11 +81,11 @@ class BaseDataset(Dataset):
         # Transforms
         self.transforms = self.build_transforms(hyp=hyp)
 
-    def get_img_files(self, img_path):
+    def get_img_files(self):
         """Read image files."""
         try:
             f = []  # image files
-            for p in img_path if isinstance(img_path, list) else [img_path]:
+            for p in self.img_path if isinstance(self.img_path, list) else [self.img_path]:
                 p = Path(p)  # os-agnostic
                 if p.is_dir():  # dir
                     f += glob.glob(str(p / "**" / "*.*"), recursive=True)
@@ -122,9 +100,9 @@ class BaseDataset(Dataset):
                     raise FileNotFoundError(f"{self.prefix}{p} does not exist")
             im_files = sorted(x.replace("/", os.sep) for x in f if x.split(".")[-1].lower() in IMG_FORMATS)
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
-            assert im_files, f"{self.prefix}No images found in {img_path}. {FORMATS_HELP_MSG}"
+            assert im_files, f"{self.prefix}No images found in {self.img_path}. {FORMATS_HELP_MSG}"
         except Exception as e:
-            raise FileNotFoundError(f"{self.prefix}Error loading data from {img_path}\n{HELP_URL}") from e
+            raise FileNotFoundError(f"{self.prefix}Error loading data from {self.img_path}\n{HELP_URL}") from e
         if self.fraction < 1:
             im_files = im_files[: round(len(im_files) * self.fraction)]  # retain a fraction of the dataset
         return im_files

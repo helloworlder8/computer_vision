@@ -50,7 +50,7 @@ class PoseTrainer(yolo.detect.DetectionTrainer):
         super().set_model_attributes()
         self.model.kpt_shape = self.data["kpt_shape"]
 
-    def generate_loss_names_and_validator(self):
+    def _get_loss_names_validator(self):
         """Returns an instance of the PoseValidator class for validation."""
         self.loss_names = "box_loss", "pose_loss", "kobj_loss", "cls_loss", "dfl_loss"
         return yolo.pose.PoseValidator(

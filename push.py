@@ -86,13 +86,15 @@ if __name__ == '__main__':
 # git remote add origin https://github.com/helloworlder8/computer_vision.git
 # git branch
 # git add -A
-# git commit -m "24-11-13"
-# git push -u origin 24-11-13
+# git commit -m "24-11-14"
+# git push -u origin 24-11-14
 # git config --global --unset http.proxy
 # git config --global --unset https.proxy
 #helloworlder8
 #ghp_3evWUSgNgYio9UWL4H0C6yxqgrU33x4FUlww
 
+# git config --global user.email "3495593669@qq.com"
+# git config --global user.name "helloworlder8"
 
 
 # // Host RM

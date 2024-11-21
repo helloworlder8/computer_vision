@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
-from ultralytics.nn.autobackend import check_class_names
+from ultralytics.nn.autobackend import check_data_dict_names
 from ultralytics.utils import (
     DATASETS_DIR,
     LOGGER,
@@ -286,6 +286,8 @@ def check_det_dataset(data_yaml, autodownload=True): #yaml数据字符串路径
                 )
             LOGGER.info("WARNING ⚠️ renaming data YAML 'validation' key to 'val' to match YOLO format.")
             data_dict["val"] = data_dict.pop("validation")  # replace 'validation' key with 'val' key
+
+
     if "names" not in data_dict and "nc" not in data_dict: #名字和类别数都没有
         raise SyntaxError(emojis(f"{data_yaml} key missing ❌.\n either 'names' or 'nc' are required in all data YAMLs."))
     if "names" in data_dict and "nc" in data_dict and len(data_dict["names"]) != data_dict["nc"]: #都有但是两个数量不相等
@@ -295,7 +297,7 @@ def check_det_dataset(data_yaml, autodownload=True): #yaml数据字符串路径
     else: #没类别数 我给你类别数目
         data_dict["nc"] = len(data_dict["names"])
 
-    data_dict["names"] = check_class_names(data_dict["names"])
+    data_dict["names"] = check_data_dict_names(data_dict["names"])
 
     # Resolve paths
     path = Path(extract_dir or data_dict.get("path") or Path(data_dict.get("data_yaml", "")).parent)  # dataset root

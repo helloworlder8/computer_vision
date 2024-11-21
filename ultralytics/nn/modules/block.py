@@ -409,56 +409,62 @@ class ResNetLayer(nn.Module):
 
 class MaxSigmoidAttnBlock(nn.Module):
     """Max Sigmoid attention block."""
-
-    def __init__(self, c1, c2, nh=1, ec=128, gc=512, scale=False):
+    #                 输入 输出 注意力头 编码维度 文本向量初始维度 尺度缩放
+    def __init__(self, c1, c2, num_head=1, ec=64, text_channels=512, scale=False):
         """Initializes MaxSigmoidAttnBlock with specified arguments."""
         super().__init__()
-        self.nh = nh
-        self.hc = c2 // nh
+        self.nh = num_head
+        self.hc = c2 // num_head
         self.ec = Conv(c1, ec, k=1, act=False) if c1 != ec else None
-        self.gl = nn.Linear(gc, ec)
-        self.bias = nn.Parameter(torch.zeros(nh))
+        self.gl = nn.Linear(text_channels, ec)
+        self.bias = nn.Parameter(torch.zeros(num_head))
         self.proj_conv = Conv(c1, c2, k=3, s=1, act=False)
-        self.scale = nn.Parameter(torch.ones(1, nh, 1, 1)) if scale else 1.0
+        self.scale = nn.Parameter(torch.ones(1, num_head, 1, 1)) if scale else 1.0
 
-    def forward(self, x, guide):
+    def forward(self, x, guide): #torch.Size([4, 64, 80, 80]) torch.Size([4, 80, 512])
         """Forward process."""
         bs, _, h, w = x.shape
 
-        guide = self.gl(guide)
-        guide = guide.view(bs, -1, self.nh, self.hc)
-        embed = self.ec(x) if self.ec is not None else x
-        embed = embed.view(bs, self.nh, self.hc, h, w)
+        # 文本
+        guide = self.gl(guide) #torch.Size([4, 80, 64]) 降维
+        guide = guide.view(bs, -1, self.nh, self.hc) #torch.Size([4, 80, 2, 32]) #批 token 注意力头 注意力维度
+        
+        #图像
+        embed = self.ec(x) if self.ec is not None else x #torch.Size([4, 64, 80, 80])
+        embed = embed.view(bs, self.nh, self.hc, h, w) #torch.Size([4, 2, 32, 80, 80]) 批 注意力头 注意力维度 宽 高
 
-        aw = torch.einsum("bmchw,bnmc->bmhwn", embed, guide)
+        aw = torch.einsum("bndhw,btnd->bnhwt", embed, guide) #torch.Size([4, 2, 80, 80, 80]) #批 头 宽 高 token
         aw = aw.max(dim=-1)[0]
-        aw = aw / (self.hc**0.5)
+        aw = aw / (self.hc**0.5) #尺度缩放
         aw = aw + self.bias[None, :, None, None]
         aw = aw.sigmoid() * self.scale
 
-        x = self.proj_conv(x)
-        x = x.view(bs, self.nh, -1, h, w)
-        x = x * aw.unsqueeze(2)
+        x = self.proj_conv(x) ##torch.Size([4, 64, 80, 80])
+        x = x.view(bs, self.nh, -1, h, w) #torch.Size([4, 2, 32, 80, 80])
+        x = x * aw.unsqueeze(2) #torch.Size([4, 2, 32, 80, 80]) 对每一个坐标点进行了注意力 附加类别信息
         return x.view(bs, -1, h, w)
 
 
-class C2fAttn(nn.Module):
+class C2fAttn(nn.Module): #YOLOV8-worldv2
     """C2f module with an additional attn module."""
-
-    def __init__(self, c1, c2, n=1, ec=128, nh=1, gc=512, shortcut=False, g=1, e=0.5):
+    # 输入 输出 数量    384 128  1     64         2 
+    def __init__(self, c1, c2, n=1, ec=128, num_head=1, text_channels=512, shortcut=False, g=1, e=0.5):
         """Initializes C2f module with attention mechanism for enhanced feature extraction and processing."""
         super().__init__()
-        self.c = int(c2 * e)  # hidden channels
+        self.c = int(c2 * e)  # hidden channels 隐藏层
+        
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((3 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.attn = MaxSigmoidAttnBlock(self.c, self.c, gc=gc, ec=ec, nh=nh)
-
-    def forward(self, x, guide):
+        self.attn = MaxSigmoidAttnBlock(self.c, self.c, text_channels=text_channels, ec=ec, num_head=num_head)
+        
+        self.cv2 = Conv((3 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        
+    def forward(self, x, guide): #torch.Size([4, 384, 80, 80])  torch.Size([4, 80, 512])
         """Forward pass through C2f layer."""
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.m)
-        y.append(self.attn(y[-1], guide))
+        y = list(self.cv1(x).chunk(2, 1)) #->torch.Size([4, 64, 80, 80]) torch.Size([4, 64, 80, 80])
+        y.extend(m(y[-1]) for m in self.m) #-> [torch.Size([4, 64, 80, 80]),torch.Size([4, 64, 80, 80]),torch.Size([4, 64, 80, 80])]
+        y.append(self.attn(y[-1], guide)) #torch.Size([4, 64, 80, 80]) torch.Size([4, 80, 512])
         return self.cv2(torch.cat(y, 1))
 
     def forward_split(self, x, guide):
@@ -472,7 +478,7 @@ class C2fAttn(nn.Module):
 class ImagePoolingAttn(nn.Module):
     """ImagePoolingAttn: Enhance the text embeddings with image-aware information."""
 
-    def __init__(self, ec=256, ch=(), ct=512, nh=8, k=3, scale=False):
+    def __init__(self, ec=256, ch=(), ct=512, num_head=8, k=3, scale=False):
         """Initializes ImagePoolingAttn with specified arguments."""
         super().__init__()
 
@@ -485,9 +491,9 @@ class ImagePoolingAttn(nn.Module):
         self.projections = nn.ModuleList([nn.Conv2d(in_channels, ec, kernel_size=1) for in_channels in ch])
         self.im_pools = nn.ModuleList([nn.AdaptiveMaxPool2d((k, k)) for _ in range(nf)])
         self.ec = ec
-        self.nh = nh
+        self.nh = num_head
         self.nf = nf
-        self.hc = ec // nh
+        self.hc = ec // num_head
         self.k = k
 
     def forward(self, x, text):
@@ -525,12 +531,12 @@ class ContrastiveHead(nn.Module):
         self.bias = nn.Parameter(torch.tensor([-10.0]))
         self.logit_scale = nn.Parameter(torch.ones([]) * torch.tensor(1 / 0.07).log())
 
-    def forward(self, x, w):
+    def forward(self, x, w): #([4, 512, 80, 80]) ([4, 80, 512])
         """Forward function of contrastive learning."""
         x = F.normalize(x, dim=1, p=2)
         w = F.normalize(w, dim=-1, p=2)
-        x = torch.einsum("bchw,bkc->bkhw", x, w)
-        return x * self.logit_scale.exp() + self.bias
+        x = torch.einsum("behw,bte->bthw", x, w)
+        return x * self.logit_scale.exp() + self.bias #([4, 80, 80, 80])
 
 
 class BNContrastiveHead(nn.Module):

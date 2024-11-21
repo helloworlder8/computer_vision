@@ -295,7 +295,7 @@ def nms_rotated(boxes, scores, threshold=0.45):
 
 def non_max_suppression(
     preds, 
-    conf=0.25, 
+    conf_thres=0.25, 
     NMS_Threshold=0.45, 
     classes=None, 
     agnostic=False, 
@@ -310,7 +310,7 @@ def non_max_suppression(
     rotated=False
 ):
     import torchvision  # scope for faster 'import ultralytics'
-    assert 0 <= conf <= 1, f"Invalid confidence threshold {conf}, valid values are between 0.0 and 1.0"
+    assert 0 <= conf_thres <= 1, f"Invalid confidence threshold {conf_thres}, valid values are between 0.0 and 1.0"
     assert 0 <= NMS_Threshold <= 1, f"Invalid IoU {NMS_Threshold}, valid values are between 0.0 and 1.0"
 
     if isinstance(preds, (list, tuple)):
@@ -319,11 +319,17 @@ def non_max_suppression(
     if classes is not None:
         classes = torch.tensor(classes, device=preds.device)
 
+    if preds.shape[-1] == 6:  # end-to-end model (BNC, i.e. 1,300,6)
+        output = [pred[pred[:, 4] > conf_thres][:max_det] for pred in preds]
+        if classes is not None:
+            output = [pred[(pred[:, 5:6] == classes).any(1)] for pred in output]
+        return output
+    
     batch_size = preds.shape[0]
     nc = nc or (preds.shape[1] - 4)
     num_masks = preds.shape[1] - nc - 4
     mask_index = 4 + nc
-    conf_TF = preds[:, 4:mask_index].amax(1) > conf #批 (类框) 点torch.Size([4, 84, 4851])->  torch.Size([2, 3528]) 
+    conf_TF = preds[:, 4:mask_index].amax(1) > conf_thres #批 (类框) 点torch.Size([4, 84, 4851])->  torch.Size([2, 3528]) 
 
     time_limit = 2.0 + max_time_img * batch_size
     multi_label &= nc > 1
@@ -352,11 +358,11 @@ def non_max_suppression(
         pd_box, pd_cls, pd_mask = pred.split((4, nc, num_masks), 1) #4 80 32
 
         if multi_label: #同一个bbox多个类别
-            boxes_index, cls_index = torch.where(pd_cls > conf)
+            boxes_index, cls_index = torch.where(pd_cls > conf_thres)
             pred = torch.cat((pd_box[boxes_index], pred[boxes_index, 4 + cls_index, None], cls_index[:, None].float(), pd_mask[boxes_index]), 1)
         else: #torch.Size([407, 6])  box score cls——index   4 1 1 32
             cls_conf, j = pd_cls.max(1, keepdim=True)
-            pred = torch.cat((pd_box, cls_conf, j.float(), pd_mask), 1)[cls_conf.view(-1) > conf]
+            pred = torch.cat((pd_box, cls_conf, j.float(), pd_mask), 1)[cls_conf.view(-1) > conf_thres]
 
         if classes is not None:
             pred = pred[(pred[:, 5:6] == classes).any(1)]

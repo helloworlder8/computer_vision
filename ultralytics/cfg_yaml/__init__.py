@@ -310,7 +310,7 @@ def get_save_dir(args, name=None):
 
 
 
-def _handle_deprecation(overrides_dict):
+def _deprecation_warn(overrides_dict):
     """Handles deprecated configuration keys by mapping them to current equivalents with deprecation warnings."""
 
     for key in overrides_dict.copy().keys():
@@ -332,7 +332,7 @@ def _handle_deprecation(overrides_dict):
 # check_dict_alignment(default_cfg_dict, overrides_dict)
 def check_dict_alignment(default_cfg_dict: Dict, overrides_dict: Dict, e=None):
 
-    overrides_dict = _handle_deprecation(overrides_dict)
+    overrides_dict = _deprecation_warn(overrides_dict)
     default_keys, overrides_keys = (set(x.keys()) for x in (default_cfg_dict, overrides_dict))
     mismatched = [k for k in overrides_keys if k not in default_keys]
     if mismatched:

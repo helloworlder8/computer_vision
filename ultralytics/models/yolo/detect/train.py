@@ -16,7 +16,7 @@ from ultralytics.utils.plotting import plot_images, plot_labels, plot_results
 from ultralytics.utils.torch_utils import de_parallel, torch_distributed_zero_first
 
 
-class DetectionTrainer(BaseTrainer):
+class DetectionTrainer(BaseTrainer): #检测训练器也被很多重载
     """
     A class extending the BaseTrainer class for training based on a detection model.
 
@@ -30,15 +30,8 @@ class DetectionTrainer(BaseTrainer):
         ```
     """
 
-    def build_dataset(self, img_path, mode="train", batch_size=None):
-        """
-        Build YOLO Dataset.
+    def _build_dataset(self, img_path, mode="train", batch_size=None):
 
-        Args:
-            dataset_str (str): Path to the folder containing images.
-            mode (str): `train` mode or `val` mode, users are able to customize different augmentations for each mode.
-            batch (int, optional): Size of batches, this is for `rect`. Defaults to None.
-        """
         gs = max(int(de_parallel(self.model).stride.max() if self.model else 0), 32)
         return build_yolo_dataset(self.args, img_path, self.data_dict, batch_size, mode=mode, rect=mode == "val", stride=gs)
 
@@ -46,7 +39,7 @@ class DetectionTrainer(BaseTrainer):
         """Construct and return dataloader."""
         assert mode in {"train", "val"}, f"Mode must be 'train' or 'val', not {mode}."
         with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
-            dataset = self.build_dataset(dataset_str, mode, batch_size)
+            dataset = self._build_dataset(dataset_str, mode, batch_size)
         shuffle = mode == "train"
         workers = self.args.workers if mode == "train" else self.args.workers * 2
         if getattr(dataset, "rect", False) and shuffle:
@@ -54,7 +47,7 @@ class DetectionTrainer(BaseTrainer):
             shuffle = False
         return build_dataloader(dataset, batch_size, workers, shuffle, rank)  # return dataloader
 
-    def _normalize_img(self, batch):
+    def _train_data_preprocess(self, batch):
         """Preprocesses a batch of images by scaling and converting to float."""
         # 获取 "ch" 键的值，如果不存在则返回 None
         ch = self.data_dict.get("ch")
@@ -99,7 +92,7 @@ class DetectionTrainer(BaseTrainer):
             model.load(weights)
         return model
 
-    def generate_loss_names_and_validator(self):
+    def _get_loss_names_validator(self):
         """Returns a DetectionValidator for YOLO model validation."""
         self.loss_names = "box_loss", "cls_loss", "dfl_loss"
         return yolo.detect.DetectionValidator(

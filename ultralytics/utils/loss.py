@@ -297,32 +297,6 @@ class DetectionLoss:
         # self.assigner = TaskAlignedAssigner(topk=tal_topk, nc=self.nc, alpha=0.5, beta=6.0, IoU_algorithm="SIoU")
         self.bbox_loss = BboxLoss(m.reg_max, model.args.IoU).to(device)
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
-    # torch.Size([21, 6])  2   torch.Size([4])
-    def preprocess(self, targets, batch_size, scale_tensor): #金字塔到计算机图像域  xywh-》xyxy
-        """Preprocesses the target counts and matches with the input batch size to output a tensor."""
-        nl, ne = targets.shape
-        if nl == 0:
-            gt_targets = torch.zeros(batch_size, 0, ne - 1, device=self.device)
-        else:
-            img_idx = targets[:, 0]  # image index  torch.Size([2]) torch.Size([2])
-            _, counts = img_idx.unique(return_counts=True) #{Tensor:(21,)} tensor([0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.], device='cuda:0')  {Tensor:(2,)} tensor([ 8, 13], device='cuda:0', dtype=torch.int32)
-            counts = counts.to(dtype=torch.int32)
-            gt_targets = torch.zeros(batch_size, counts.max(), ne - 1, device=self.device) #t 2 13 5
-            for j in range(batch_size):
-                TF = img_idx == j
-                n = TF.sum()
-                if n:
-                    gt_targets[j, :n] = targets[TF, 1:]
-            gt_targets[..., 1:5] = xywh2xyxy(gt_targets[..., 1:5].mul_(scale_tensor)) #gt_targets 金字塔后的图像坐标
-        return gt_targets
-    def bbox_decode(self, anc_points, pd_dist): #8400 2       2 8400 64
-        """Decode predicted object bounding box coordinates from anchor points and distribution."""
-        if self.use_dfl:
-            b, a, c = pd_dist.shape  # batch, anchors, channels
-            pd_dist = pd_dist.view(b, a, 4, c // 4).softmax(3).matmul(self.proj.type(pd_dist.dtype)) #2 8400 4
-            # pd_dist = pd_dist.view(b, a, c // 4, 4).transpose(2,3).softmax(3).matmul(self.proj.type(pd_dist.dtype))
-            # pd_dist = (pd_dist.view(b, a, c // 4, 4).softmax(2) * self.proj.type(pd_dist.dtype).view(1, 1, -1, 1)).sum(2)
-        return dist2bbox(pd_dist, anc_points, xywh=False) #torch.Size([2, 8400, 4])   torch.Size([8400, 2])
 
     def __call__(self, preds, batch):
         """Calculate the sum of the loss for box, cls and dfl multiplied by batch size."""
@@ -330,20 +304,20 @@ class DetectionLoss:
         feats = preds[1] if isinstance(preds, tuple) else preds
         pd_distri, pd_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
             (self.reg_max * 4, self.nc), 1
-        )
+        ) #批 维 点   批维点
 
-        pd_scores = pd_scores.permute(0, 2, 1).contiguous()
-        pd_distri = pd_distri.permute(0, 2, 1).contiguous()
+        pd_scores = pd_scores.permute(0, 2, 1).contiguous() #torch.Size([4, 8400, 80])
+        pd_distri = pd_distri.permute(0, 2, 1).contiguous() #torch.Size([4, 8400, 64])
 
         dtype = pd_scores.dtype
-        batch_size = pd_scores.shape[0]
+        batch_size = pd_scores.shape[0] #4
         imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]  # image size (h,w)
         anc_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
 
         # Targets
-        lables_info = torch.cat((batch["img_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1) #标签层面到真实标签层面
-        gt_lables_info = self.preprocess(lables_info.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
-        gt_labels, gt_bboxes = gt_lables_info.split((1, 4), 2)  # cls, xyxy
+        targets = torch.cat((batch["img_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1) #标签层面到真实标签层面
+        targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
+        gt_labels, gt_bboxes = targets.split((1, 4), 2) #批 框 维 cls, xyxy
         gt_mask = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
 
         # Pboxes
@@ -376,6 +350,36 @@ class DetectionLoss:
         loss[2] *= self.hyp.dfl  # dfl gain
 
         return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+    
+    
+    # torch.Size([21, 6])  2   torch.Size([4])
+    def preprocess(self, targets, batch_size, scale_tensor): #金字塔到计算机图像域  xywh-》xyxy
+        """Preprocesses the target counts and matches with the input batch size to output a tensor.""" #num_dim
+        num_tag, num_dim = targets.shape
+        if num_tag == 0:
+            gt_targets = torch.zeros(batch_size, 0, num_dim - 1, device=self.device)
+        else:
+            img_idx = targets[:, 0]  # image index  torch.Size([2]) torch.Size([2])
+            _, counts = img_idx.unique(return_counts=True) #{Tensor:(21,)} tensor([0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.], device='cuda:0')  {Tensor:(2,)} tensor([ 8, 13], device='cuda:0', dtype=torch.int32)
+            counts = counts.to(dtype=torch.int32)
+            gt_targets = torch.zeros(batch_size, counts.max(), num_dim - 1, device=self.device) #t 2 13 5
+            for j in range(batch_size):
+                TF = img_idx == j
+                n = TF.sum()
+                if n:
+                    gt_targets[j, :n] = targets[TF, 1:]
+            gt_targets[..., 1:5] = xywh2xyxy(gt_targets[..., 1:5].mul_(scale_tensor)) #gt_targets 金字塔后的图像坐标
+        return gt_targets
+    def bbox_decode(self, anc_points, pd_dist): #8400 2       2 8400 64
+        """Decode predicted object bounding box coordinates from anchor points and distribution."""
+        if self.use_dfl:
+            b, a, c = pd_dist.shape  # batch, anchors, channels
+            pd_dist = pd_dist.view(b, a, 4, c // 4).softmax(3).matmul(self.proj.type(pd_dist.dtype)) #2 8400 4
+            # pd_dist = pd_dist.view(b, a, c // 4, 4).transpose(2,3).softmax(3).matmul(self.proj.type(pd_dist.dtype))
+            # pd_dist = (pd_dist.view(b, a, c // 4, 4).softmax(2) * self.proj.type(pd_dist.dtype).view(1, 1, -1, 1)).sum(2)
+        return dist2bbox(pd_dist, anc_points, xywh=False) #torch.Size([2, 8400, 4])   torch.Size([8400, 2])
+
+
 
 def combined_loss(pred, target, alpha=0.5):
     bce_loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")  # 保持与输入相同形状

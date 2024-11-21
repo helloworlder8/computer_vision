@@ -19,7 +19,7 @@ from ultralytics.utils.checks import check_requirements, check_suffix, check_ver
 from ultralytics.utils.downloads import attempt_download_asset, is_url
 
 
-def check_class_names(names):
+def check_data_dict_names(names):
     """
     Check class names.
 
@@ -105,7 +105,7 @@ class AutoBackend(nn.Module):
         """
         super().__init__()
         w = str(models[0] if isinstance(models, list) else models)
-        nn_module = isinstance(models, torch.nn.Module)
+        In_memory_pt = isinstance(models, torch.nn.Module)
         (
             pt,
             jit,
@@ -122,23 +122,23 @@ class AutoBackend(nn.Module):
             ncnn,
             triton,
         ) = self._model_type(w)
-        fp16 &= pt or jit or onnx or xml or engine or nn_module or triton  # FP16
+        fp16 &= pt or jit or onnx or xml or engine or In_memory_pt or triton  # FP16
         nhwc = coreml or saved_model or pb or tflite or edgetpu  # BHWC formats (vs torch BCWH)
         stride = 32  # default stride
         model, metadata = None, None
 
         # Set device
         cuda = torch.cuda.is_available() and device.type != "cpu"  # use CUDA
-        if cuda and not any([nn_module, pt, jit, engine, onnx]):  # GPU dataloader formats
+        if cuda and not any([In_memory_pt, pt, jit, engine, onnx]):  # GPU dataloader formats
             device = torch.device("cpu")
             cuda = False
 
         # Download if not local
-        if not (pt or triton or nn_module):
+        if not (pt or triton or In_memory_pt):
             w = attempt_download_asset(w)
 
         # In-memory PyTorch model
-        if nn_module:
+        if In_memory_pt:
             model = models.to(device)
             if fuse:
                 model = model.fuse(verbose=verbose)
@@ -417,13 +417,13 @@ class AutoBackend(nn.Module):
             imgsz = metadata["imgsz"]
             names = metadata["names"]
             kpt_shape = metadata.get("kpt_shape")
-        elif not (pt or triton or nn_module):
+        elif not (pt or triton or In_memory_pt):
             LOGGER.warning(f"WARNING ⚠️ Metadata not found for 'model={models}'")
 
         # Check names
         if "names" not in locals():  # names missing
             names = default_class_names(data)
-        names = check_class_names(names)
+        names = check_data_dict_names(names)
 
         # Disable gradients
         if pt:
@@ -452,7 +452,7 @@ class AutoBackend(nn.Module):
             im = im.permute(0, 2, 3, 1)  # torch BCHW to numpy BHWC shape(1,320,192,3)
 
         # PyTorch
-        if self.pt or self.nn_module:
+        if self.pt or self.In_memory_pt:
             y = self.model(im, augment=augment, visualize=visualize, embed=embed)
 
         # TorchScript
@@ -625,7 +625,7 @@ class AutoBackend(nn.Module):
         """
         import torchvision  # noqa (import here so torchvision import time not recorded in postprocess time)
 
-        warmup_types = self.pt, self.jit, self.onnx, self.engine, self.saved_model, self.pb, self.triton, self.nn_module
+        warmup_types = self.pt, self.jit, self.onnx, self.engine, self.saved_model, self.pb, self.triton, self.In_memory_pt
         if any(warmup_types) and (self.device.type != "cpu" or self.triton):
             im = torch.empty(*imgsz, dtype=torch.half if self.fp16 else torch.float, device=self.device)  # input
             for _ in range(2 if self.jit else 1):

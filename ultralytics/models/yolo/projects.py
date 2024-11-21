@@ -17,8 +17,8 @@ class YOLOProject(BaseProject):
         model_path = Path(model_name)
         if "-world" in model_path.stem and model_path.suffix in {".pt", ".yaml", ".yml"}:  # if YOLOWorld PyTorch model
             new_instance = YOLOWorld(model_path, verbose=verbose)
-            self.__class__ = type(new_instance)
-            self.__dict__ = new_instance.__dict__
+            self.__class__ = type(new_instance) #yoloworld类
+            self.__dict__ = new_instance.__dict__ #所有的成员属性
         else:
             # Continue with default YOLO initialization
             super().__init__(model_name=model_name, task=task, verbose=verbose)
@@ -60,6 +60,9 @@ class YOLOProject(BaseProject):
         }
 YOLO = YOLOProject
 
+
+
+
 class YOLOWorld(BaseProject):
     """YOLO-World object detection model."""
 
@@ -70,7 +73,7 @@ class YOLOWorld(BaseProject):
         Args:
             model (str | Path): Path to the pre-trained model. Defaults to 'yolov8s-world.pt'.
         """
-        super().__init__(model=model, task="detect", verbose=verbose)
+        super().__init__(model_name=model, task="detect", verbose=verbose)
 
         # Assign default COCO class names when there are no custom names
         if not hasattr(self.model, "names"):
@@ -81,28 +84,28 @@ class YOLOWorld(BaseProject):
         """Map head to model, validator, and predictor classes."""
         return {
             "detect": {
-                "model": WorldModel,
+                "model": WorldModel, #模型不一样
                 "validator": yolo.detect.DetectionValidator,
                 "predictor": yolo.detect.DetectionPredictor,
-                "trainer": yolo.world.WorldTrainer,
+                "trainer": yolo.world.WorldTrainer, #训练不一样
             }
         }
 
-    def set_classes(self, classes):
+    def set_classes(self, name):
         """
         Set classes.
 
         Args:
             classes (List(str)): A list of categories i.e. ["person"].
         """
-        self.model.set_classes(classes)
+        self.model.generate_name_feats(name)
         # Remove background if it's given
         background = " "
-        if background in classes:
-            classes.remove(background)
-        self.model.names = classes
+        if background in name:
+            name.remove(background)
+        self.model.names = name
 
         # Reset method class names
         # self.predictor = None  # reset predictor otherwise old names remain
         if self.predictor:
-            self.predictor.model.names = classes
+            self.predictor.model.names = name

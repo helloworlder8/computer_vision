@@ -13,7 +13,7 @@ def process_model(model_yaml,ch):
     # print(f"\033[1mProcessing model: {model_yaml}\033[0m")
     model_dict = create_model_dict(model_yaml)
     # 创建检测模型
-    detection_model = DetectionModel(model_dict, ch=ch, nc=1, verbose=False)
+    detection_model = DetectionModel(model_dict, ch=ch, nc=8, verbose=False)
     # 融合模型（如果适用）DetectionModel
     print(f"\033[1mProcessing model: {model_yaml}\033[0m")
     detection_model.fuse()
@@ -32,15 +32,30 @@ def process_all_models(directory,ch):
 
 if __name__ == '__main__':
     # model_directory = "ultralytics/cfg_yaml/models/ALSS2/ALSSm-seg.yaml"
-    model_directory = "result/Comparative_experiment"
+    model_directory = "yolov10s.yaml"
     ch = 3
     # 检查model_directory是文件还是文件夹
-    if os.path.isfile(model_directory):
-        process_model(model_directory,ch)
+    if '.' in os.path.basename(model_directory) and model_directory.rsplit('.', 1)[-1]:
+        process_model(model_directory, ch)
     elif os.path.isdir(model_directory):
-        process_all_models(model_directory,ch)
+        process_all_models(model_directory, ch)
     else:
-        print(f"Error: {model_directory} is neither a file nor a directory.")
-        
-# Model summary (fused): 204 layers, 1,825,773 parameters, 1,825,749 gradients, 9.3 GFLOPs
-# Model summary (fused): 195 layers, 1,695,159 parameters, 1,695,143 gradients, 7.1 GFLOPs
+        print(f"Error: {model_directory} is neither a valid file with a suffix nor a directory.")
+# ultralytics/cfg_yaml/models/v8/yolov8-ghost.yaml
+
+#yolov3s.yaml 10,256,616
+#yolov5s.yaml 9,114,632
+#yolov6s.yaml 10,920,488
+#yolov8s.yaml 11,128,680
+#yolov9s.yaml 7,170,184
+#yolov10s.yaml 7,989,936 24.5
+#yolov11s.yaml 10,713,816
+#yolov8s-p2.yaml 10,093,448
+#yolov8m-ghost.yaml 10,279,74
+#yolov8m-ghost-p2.yaml 8,988,064
+
+
+
+# yolov8-rtdetr.yaml
+
+# 2,904,992  v11n

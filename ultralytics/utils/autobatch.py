@@ -7,39 +7,17 @@ import numpy as np
 import torch
 
 from ultralytics.utils import DEFAULT_CFG, LOGGER, colorstr
-from ultralytics.utils.torch_utils import profile
+from ultralytics.utils.torch_utils import autocast, profile
 
 
-def check_train_batch_size(model, imgsz=640, amp=True, batch=-1):
-    """
-    Compute optimal YOLO training batch size using the autobatch() function.
+def auto_batch_size(model, imgsz=640, amp=True, batch=-1):
 
-    Args:
-        model (torch.nn.Module): YOLO model to check batch size for.
-        imgsz (int): Image size used for training.
-        amp (bool): If True, use automatic mixed precision (AMP) for training.
-
-    Returns:
-        (int): Optimal batch size computed using the autobatch() function.
-    """
-
-    with torch.cuda.amp.autocast(amp):
+    with autocast(enabled=amp):
         return autobatch(deepcopy(model).train(), imgsz, fraction=batch if 0.0 < batch < 1.0 else 0.6)
 
 
 def autobatch(model, imgsz=640, fraction=0.60, batch_size=DEFAULT_CFG.batch):
-    """
-    Automatically estimate the best YOLO batch size to use a fraction of the available CUDA memory.
 
-    Args:
-        model (torch.nn.module): YOLO model to compute batch size for.
-        imgsz (int, optional): The image size used as input for the YOLO model. Defaults to 640.
-        fraction (float, optional): The fraction of available CUDA memory to use. Defaults to 0.60.
-        batch_size (int, optional): The default batch size to use if an error is detected. Defaults to 16.
-
-    Returns:
-        (int): The optimal batch size.
-    """
 
     # Check device
     prefix = colorstr("AutoBatch: ")

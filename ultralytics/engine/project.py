@@ -142,8 +142,8 @@ class BaseProject(nn.Module):
         # model_pt = checks.check_model_file_from_stem(model_pt)  # add suffix, i.e. yolov8n -> yolov8n.pt
 
         if Path(model_pt).suffix == ".pt":
-            self.ckpt, model_pt = load_download_model(model_pt)  # load ckpt  下载模型
-            self.model = attribute_assignment(self.ckpt,model_pt)
+            # self.ckpt, model_pt = load_download_model(model_pt)  # load ckpt  下载模型
+            self.ckpt, self.model = attribute_assignment(model_pt)
             self.model_name = self.model.model_name
             self.task = self.model.args["task"]
             self.ckpt_path = model_pt
@@ -213,18 +213,7 @@ class BaseProject(nn.Module):
         return self
 
     def save(self, filename: Union[str, Path] = "saved_model.pt", use_dill=True) -> None:
-        """
-        Saves the current model state to a file.
 
-        This method exports the model's checkpoint (ckpt) to the specified filename.
-
-        Args:
-            filename (str | Path): The name of the file to save the model to. Defaults to 'saved_model.pt'.
-            use_dill (bool): Whether to try using dill for serialization if available. Defaults to True.
-
-        Raises:
-            AssertionError: If the model is not a PyTorch model.
-        """
         self._check_is_pytorch_model()
         from copy import deepcopy
         from datetime import datetime
@@ -238,7 +227,7 @@ class BaseProject(nn.Module):
             "license": "AGPL-3.0 License (https://ultralytics.com/license)",
             "docs": "https://docs.ultralytics.com",
         }
-        torch.save({**self.ckpt, **updates}, filename, use_dill=use_dill)
+        torch.save({**self.ckpt, **updates}, filename, use_dill=use_dill) #字典 文件名
 
     def info(self, detailed: bool = False, verbose: bool = True):
         """
@@ -300,53 +289,9 @@ class BaseProject(nn.Module):
             kwargs["embed"] = [len(self.model.model) - 2]  # embed second-to-last layer if no indices passed
         return self.predict(source, stream, **kwargs)
 
-    def predict(
-        self,
-        source: Union[str, Path, int, list, tuple, np.ndarray, torch.Tensor] = None,
-        stream: bool = False,
-        predictor=None,
-        **kwargs,
-    ) -> List[Results]:
-        """
-        Performs predictions on the given image source using the YOLO model.
 
-        This method facilitates the prediction process, allowing various configurations through keyword arguments.
-        It supports predictions with custom predictors or the default predictor method. The method handles different
-        types of image sources and can operate in a streaming mode. It also provides support for SAM-type models
-        through 'prompts'.
-
-        The method sets up a new predictor if not already present and updates its arguments with each call.
-        It also issues a warning and uses default assets if the 'source' is not provided. The method determines if it
-        is being called from the command line interface and adjusts its behavior accordingly, including setting defaults
-        for confidence threshold and saving behavior.
-
-        Args:
-            source (str | int | PIL.Image | np.ndarray, optional): The source of the image for making predictions.
-                Accepts various types, including file paths, URLs, PIL images, and numpy arrays. Defaults to ASSETS.
-            stream (bool, optional): Treats the input source as a continuous stream for predictions. Defaults to False.
-            predictor (BasePredictor, optional): An instance of a custom predictor class for making predictions.
-                If None, the method uses a default predictor. Defaults to None.
-            **kwargs (any): Additional keyword arguments for configuring the prediction process. These arguments allow
-                for further customization of the prediction behavior.
-
-        Returns:
-            (List[ultralytics.engine.results.Results]): A list of prediction results, encapsulated in the Results class.
-
-        Raises:
-            AttributeError: If the predictor is not properly set up.
-        """
-        if source is None:
-            source = ASSETS
-            LOGGER.warning(f"WARNING ⚠️ 'source' is missing. Using 'source={source}'.")
-
-        # is_cli = (ARGV[0].endswith("yolo") or ARGV[0].endswith("ultralytics")) and any(
-        #     x in ARGV for x in ("predict", "track", "mode=predict", "mode=track")
-        # )
-        # 有什么数据，做什么任务，有什么模型，输入图像尺寸，是不是一个类
-        custom = {"conf": 0.3, "batch": 1, "save": False, "mode": "predict"}  # 人任务模型数据，图单
-        args = {**self.overrides, **custom, **kwargs}  # highest priority args on the right
+    def prepare_predictor(self,args,predictor):
         prompts = args.pop("prompts", None)  # for SAM-type models
-
         if not self.predictor:
             self.predictor = predictor or self._task_map("predictor")(overrides=args, _callbacks=self.callbacks)
             self.predictor.setup_model(model=self.model, verbose=False)
@@ -356,6 +301,26 @@ class BaseProject(nn.Module):
                 self.predictor.save_dir = get_save_dir(self.predictor.args)
         if prompts and hasattr(self.predictor, "set_prompts"):  # for SAM-type models
             self.predictor.set_prompts(prompts)
+
+        
+        
+    def predict(
+        self,
+        source: Union[str, Path, int, list, tuple, np.ndarray, torch.Tensor] = None,
+        stream: bool = False,
+        predictor=None,
+        **kwargs,
+    ) -> List[Results]:
+
+        if source is None:
+            source = ASSETS
+            LOGGER.warning(f"WARNING ⚠️ 'source' is missing. Using 'source={source}'.")
+        # 有什么数据，做什么任务，有什么模型，输入图像尺寸，是不是一个类
+        custom = {"conf": 0.3, "batch": 1, "save": False, "mode": "predict"}  # 人任务模型数据，图单
+        args = {**self.overrides, **custom, **kwargs}  # highest priority args on the right
+        
+        self.prepare_predictor(args, predictor)
+
         ch = args.get("ch") if args.get("ch") else 3
         return self.predictor.predict_cli(source=source) if False else self.predictor(source=source, stream=stream,ch=ch)
 
@@ -499,7 +464,7 @@ class BaseProject(nn.Module):
         # pt 任务 数据yaml 图像尺寸 单类 模型名
         """Initialize the trainer with given parameters."""
         self._combine_args(kwargs)
-        self._initialize_trainer(kwargs) #imp
+        self._initialize_trainer(trainer) #imp
         
         self.trainer.train() #imp
         
@@ -539,9 +504,9 @@ class BaseProject(nn.Module):
         if self.args.get("resume"):
             self.args["resume_pt"] = self.ckpt_path
 
-    def _initialize_trainer(self, kwargs):
+    def _initialize_trainer(self, trainer):
         """Initialize the trainer."""
-        trainer_cls = kwargs.get("trainer") or self._task_map("trainer")
+        trainer_cls = trainer or self._task_map("trainer")
         self.trainer = trainer_cls(overrides=self.args, _callbacks=self.callbacks) #生成文件
         if not self.args.get("resume"):
             if hasattr(self, 'model') and self.model:
@@ -616,15 +581,15 @@ class BaseProject(nn.Module):
         Retrieves the class names associated with the loaded model.
 
         This property returns the class names if they are defined in the model. It checks the class names for validity
-        using the 'check_class_names' function from the ultralytics.nn.autobackend module.
+        using the 'check_data_dict_names' function from the ultralytics.nn.autobackend module.
 
         Returns:
             (list | None): The class names of the model if available, otherwise None.
         """
-        from ultralytics.nn.autobackend import check_class_names
+        from ultralytics.nn.autobackend import check_data_dict_names
 
         if hasattr(self.model, "names"):
-            return check_class_names(self.model.names)
+            return check_data_dict_names(self.model.names)
         if not self.predictor:  # export formats will not have predictor defined until predict() is called
             self.predictor = self._task_map("predictor")(overrides=self.overrides, _callbacks=self.callbacks)
             self.predictor.setup_model(model=self.model, verbose=False)

@@ -24,7 +24,7 @@ backbone:
   - [-1, 1, Conv, [1024, 3, 2]] # 7-P5/32
   - [-1, 3, C2f, [1024, True]]
   - [-1, 1, SPPF, [1024, 5]] # 9
-
+    # def __init__(self, c1, c2, n=1, ec=128, nh=1, gc=512, shortcut=False, g=1, e=0.5):
 # YOLOv8.0n head
 head:
   - [-1, 1, nn.Upsample, [None, 2, "nearest"]]

@@ -243,7 +243,7 @@ class DetectionValidator(BaseValidator):
         bbox_iou = box_iou(gt_bbox, predn[:, :4]) #torch.Size([17, 228]) 17是真实 228是预测
         return self.create_tp_iouv_matrix(predn[:, 5], gt_cls, bbox_iou)
 
-    def build_dataset(self, img_path, batch_size=None, mode="val"):
+    def _build_dataset(self, img_path, batch_size=None, mode="val"):
         """
         Build YOLO Dataset.
 
@@ -256,7 +256,7 @@ class DetectionValidator(BaseValidator):
 
     def get_dataloader(self, img_path, batch_size):
         """Construct and return dataloader."""
-        dataset = self.build_dataset(img_path, batch_size=batch_size, mode="val")
+        dataset = self._build_dataset(img_path, batch_size=batch_size, mode="val")
         return build_dataloader(dataset, batch_size, self.args.workers, shuffle=False, rank=-1)  # return dataloader
 
     def plot_val_samples(self, batch, ni):

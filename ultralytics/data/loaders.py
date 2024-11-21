@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
+import random
 
 import cv2
 import numpy as np
@@ -271,7 +272,7 @@ class LoadImagesAndVideos:
         _new_video(path): Create a new cv2.VideoCapture object for a given video path.
     """
 
-    def __init__(self, path, batch=1, vid_stride=1):
+    def __init__(self, path, batch=1, vid_stride=1, fraction =1):
         """Initialize the Dataloader and raise FileNotFoundError if file not found."""
         parent = None
         if isinstance(path, str) and Path(path).suffix == ".txt":  # *.txt file with img/vid/dir on each line
@@ -293,6 +294,10 @@ class LoadImagesAndVideos:
 
         # Define files as images or videos
         images, videos = [], []
+        if not (0 <= fraction <= 1):
+            raise ValueError("fraction 必须在 0 到 1 之间")
+        num_to_select = int(len(files) * fraction)
+        files =  random.sample(files, num_to_select)
         for f in files:
             suffix = f.split(".")[-1].lower()  # Get file extension without the dot and lowercase
             if suffix in IMG_FORMATS:

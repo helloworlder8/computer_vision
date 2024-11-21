@@ -33,7 +33,7 @@ LOCAL_RANK = int(os.getenv("LOCAL_RANK", -1))  # https://pytorch.org/docs/stable
 # Other Constants
 ARGV = sys.argv or ["", ""]  # sometimes sys.argv = []
 FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]  # YOLO
+ROOT = FILE.parents[1]  # ultralytics
 ASSETS = ROOT / "assets"  # default images
 DEFAULT_CFG_PATH = ROOT / "cfg_yaml/default.yaml"
 NUM_THREADS = min(8, max(1, os.cpu_count() - 1))  # number of YOLO multiprocessing threads

@@ -14,7 +14,7 @@ data: # (str, optional) path to data file, i.e. coco8.yaml
 epochs: 100 # (int) number of epochs to train for
 time: # (float, optional) number of hours to train for, overrides epochs if supplied
 patience: 10 # (int) epochs to wait for no observable improvement for early stopping of training
-batch: 16 # (int) number of images per batch (-1 for AutoBatch)
+batch: 1 # (int) number of images per batch (-1 for AutoBatch)
 imgsz: 640 # (int | list) input images size as int for train and val modes, or list[h,w] for predict and export modes
 save: True # (bool) save train checkpoints and predict results
 save_period: -1 # (int) Save checkpoint every x epochs (disabled if < 1)
@@ -36,7 +36,8 @@ close_mosaic: 10 # (int) disable mosaic augmentation for final epochs (0 to disa
 resume: False # (bool) resume training from last checkpoint
 resume_pt:
 amp: True # (bool) Automatic Mixed Precision (AMP) training, choices=[True, False], True runs AMP check
-fraction: 1.0 # (float) dataset fraction to train on (default is 1.0, all images in train set)
+# 数据集
+fraction: 1 # (float) dataset fraction to train on (default is 1.0, all images in train set)
 profile: False # (bool) profile ONNX and TensorRT speeds during training for loggers
 freeze: None # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
 multi_scale: False # (bool) Whether to use multiscale during training

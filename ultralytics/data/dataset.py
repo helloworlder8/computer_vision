@@ -44,16 +44,6 @@ DATASET_CACHE_VERSION = "1.0.3"
 
 
 class YOLODataset(BaseDataset):
-    """
-    Dataset class for loading object detection and/or segmentation labels in YOLO format.
-
-    Args:
-        data_dict (dict, optional): A dataset YAML dictionary. Defaults to None.
-        task (str): An explicit arg to point current task, Defaults to 'detect'.
-
-    Returns:
-        (torch.utils.data_dict.Dataset): A PyTorch dataset object that can be used for training an object detection model.
-    """
 
     def __init__(self, *args, data_dict=None, task="detect", **kwargs):
         """Initializes the YOLODataset with optional configurations for segments and keypoints."""
@@ -245,13 +235,7 @@ class YOLODataset(BaseDataset):
         self.transforms = self.build_transforms(hyp)
 
     def update_labels_info(self, label):
-        """
-        Custom your label format here.
 
-        Note:
-            cls is not with bboxes now, classification and semantic segmentation need an independent cls label
-            Can also support classification and semantic segmentation by adding or removing dict keys there.
-        """
         bboxes = label.pop("bboxes")
         segments = label.pop("segments", [])
         keypoints = label.pop("keypoints", None)
@@ -290,22 +274,12 @@ class YOLODataset(BaseDataset):
 
 
 class YOLOMultiModalDataset(YOLODataset):
-    """
-    Dataset class for loading object detection and/or segmentation labels in YOLO format.
-
-    Args:
-        data_dict (dict, optional): A dataset YAML dictionary. Defaults to None.
-        task (str): An explicit arg to point current task, Defaults to 'detect'.
-
-    Returns:
-        (torch.utils.data_dict.Dataset): A PyTorch dataset object that can be used for training an object detection model.
-    """
 
     def __init__(self, *args, data_dict=None, task="detect", **kwargs):
         """Initializes a dataset object for object detection tasks with optional specifications."""
         super().__init__(*args, data_dict=data_dict, task=task, **kwargs)
 
-    def update_labels_info(self, label):
+    def update_labels_info(self, label): #每次拿到标签的时候都会进行一次转换
         """Add texts information for multi-modal model training."""
         labels = super().update_labels_info(label)
         # NOTE: some categories are concatenated with its synonyms by `/`.
@@ -328,7 +302,7 @@ class GroundingDataset(YOLODataset):
         self.json_file = json_file
         super().__init__(*args, task=task, data_dict={}, **kwargs)
 
-    def get_img_files(self, img_path):
+    def get_img_files(self):
         """The image files would be read in `get_labels` function, return empty list here."""
         return []
 

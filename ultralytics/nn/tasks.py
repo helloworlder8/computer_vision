@@ -95,51 +95,27 @@ except ImportError:
 class BaseModel(nn.Module):
     """The BaseModel class serves as a base class for all the models in the Ultralytics YOLO family."""
 
-    def forward(self, x, *args, **kwargs):
-        """
-        Forward pass of the model on a single scale. Wrapper for `_forward_once` method.
+    def forward(self, x, *args, **kwargs):#使用默认的前向传播 使用关键字传参
 
-        Args:
-            x (torch.Tensor | dict): The input image tensor or a dict including image tensor and gt labels.
-
-        Returns:
-            (torch.Tensor): The output of the network.
-        """
-        if isinstance(x, dict):  # 字典就返回损失值  正常输入返回输出结果
+        if isinstance(x, dict):  # 训练阶段
             return self.loss(x, *args, **kwargs)
         return self.predict(x, *args, **kwargs)
 
+
+    def loss(self, batch, preds=None): # 目的是解耦，使得其他类是需要重载损失就可以
+
+        if getattr(self, "criterion", None) is None: #想起来四度赤水河
+            self.criterion = self.init_criterion()
+        preds = self.forward(batch["img"]) if preds is None else preds #这里是正常输入返回输出结果
+        return self.criterion(preds, batch) 
+    
     def predict(self, x, profile=False, visualize=False, augment=False, embed=None):
-        """
-        Perform a forward pass through the network.
-
-        Args:
-            x (torch.Tensor): The input tensor to the model.
-            profile (bool):  Print the computation time of each layer if True, defaults to False.
-            visualize (bool): Save the feature maps of the model if True, defaults to False.
-            augment (bool): Augment image during prediction, defaults to False.
-            embed (list, optional): A list of feature vectors/embeddings to return.
-
-        Returns:
-            (torch.Tensor): The last output of the model.
-        """
         if augment:
             return self._predict_augment(x)
         return self._predict_once(x, profile, visualize, embed) #self._predict_once前向传播
 
     def _predict_once(self, x, profile=False, visualize=False, embed=None): #torch.Size([2, 3, 640, 640])
-        """
-        Perform a forward pass through the network.
 
-        Args:
-            x (torch.Tensor): The input tensor to the model.
-            profile (bool):  Print the computation time of each layer if True, defaults to False.
-            visualize (bool): Save the feature maps of the model if True, defaults to False.
-            embed (list, optional): A list of feature vectors/embeddings to return.
-
-        Returns:
-            (torch.Tensor): The last output of the model.
-        """
         y, dt, embeddings = [], [], []  # outputs
         for m in self.seqential_model:
             if m.f != -1:  # if not from previous layer
@@ -279,19 +255,7 @@ class BaseModel(nn.Module):
         if verbose:
             LOGGER.info(f"Transferred {len(csd)}/{len(self.seqential_model.state_dict())} items from pretrained weights")
 
-    def loss(self, batch, preds=None): # imp
-        """
-        Compute loss.
 
-        Args:
-            batch (dict): Batch to compute loss on
-            preds (torch.Tensor | List[torch.Tensor]): Predictions.
-        """
-        if getattr(self, "criterion", None) is None: #想起来四度赤水河
-            self.criterion = self.init_criterion()
-
-        preds = self.forward(batch["img"]) if preds is None else preds #这里是正常输入返回输出结果
-        return self.criterion(preds, batch) 
 
     def init_criterion(self):
         """Initialize the loss criterion for the BaseModel."""
@@ -326,14 +290,18 @@ class DetectionModel(BaseModel):
             )
             self.model_dict["backbone"][0][2] = "nn.Identity"
 
-    def _build_model(self, ch, nc, verbose): #通道默认传  类别数据字典有
+    def _build_model(self, ch, nc, verbose):
         """Define the model structure."""
-        self.model_dict["ch"] = self.model_dict.get("ch", ch) #一般来说模型字典不带通道信息，我习惯于在数据字典中携带通道信息
-        if nc and nc != self.model_dict["nc"]:
-            LOGGER.info(f"Overriding model.yaml nc={self.model_dict['nc']} with nc={nc}")
+        # 如果模型字典中没有 "ch" 键，则设置为传入的 "ch" 值
+        self.model_dict.setdefault("ch", ch)  # 使用 setdefault 简化获取和设置
+
+        # 如果传入的 nc 与当前字典中的 nc 不同，更新并记录日志
+        if nc and nc != self.model_dict.get("nc"):
+            LOGGER.info(f"Overriding model.yaml nc={self.model_dict.get('nc')} with nc={nc}")
             self.model_dict["nc"] = nc
+
         
-        self.seqential_model, self.save = parse_model(deepcopy(self.model_dict), ch=ch, verbose=verbose)
+        self.seqential_model, self.save = parse_model(deepcopy(self.model_dict), ch=self.model_dict['ch'], verbose=verbose)
         self.names = {i: f"{i}" for i in range(self.model_dict["nc"])}
         self.inplace = self.model_dict.get("inplace", True)
         self.end2end = getattr(self.seqential_model[-1], "end2end", False)
@@ -604,7 +572,7 @@ class WorldModel(DetectionModel):
         self.clip_model = None  # CLIP model placeholder
         super().__init__(cfg=cfg, ch=ch, nc=nc, verbose=verbose)
 
-    def set_classes(self, text, batch=80, cache_clip_model=True):
+    def generate_name_feats(self, name, batch=80, cache_clip_model=True):
         """Set classes in advance so that model could do offline-inference without clip model."""
         try:
             import clip
@@ -616,34 +584,29 @@ class WorldModel(DetectionModel):
             not getattr(self, "clip_model", None) and cache_clip_model
         ):  # for backwards compatibility of models lacking clip_model attribute
             self.clip_model = clip.load("ViT-B/32")[0]
-        model = self.clip_model if cache_clip_model else clip.load("ViT-B/32")[0]
-        device = next(model.parameters()).device
-        text_token = clip.tokenize(text).to(device)
-        txt_feats = [model.encode_text(token).detach() for token in text_token.split(batch)]
-        txt_feats = txt_feats[0] if len(txt_feats) == 1 else torch.cat(txt_feats, dim=0)
-        txt_feats = txt_feats / txt_feats.norm(p=2, dim=-1, keepdim=True)
-        self.txt_feats = txt_feats.reshape(-1, len(text), txt_feats.shape[-1])
-        self.seqential_model[-1].nc = len(text)
+        clip_model = self.clip_model if cache_clip_model else clip.load("ViT-B/32")[0] #加载clip模型
+        device = next(clip_model.parameters()).device
+        name_token = clip.tokenize(name).to(device) # torch.Size([2, 77])
+        name_feats = [clip_model.encode_text(token).detach() for token in name_token.split(batch)] #torch.Size([2, 512])
+        name_feats = name_feats[0] if len(name_feats) == 1 else torch.cat(name_feats, dim=0) #torch.Size([80, 512])
+        name_feats = name_feats / name_feats.norm(p=2, dim=-1, keepdim=True) #torch.Size([2, 512])
+        self.txt_feats = name_feats.reshape(-1, len(name), name_feats.shape[-1]) #torch.Size([1, 2, 512]) 多少批 每一批多少 维度    #极重要
+        self.seqential_model[-1].nc = len(name) #这个模型一个致命的缺点是得假设clip模型特别强
 
-    def predict(self, x, profile=False, visualize=False, txt_feats=None, augment=False, embed=None):
-        """
-        Perform a forward pass through the model.
+    def predict(self, x, profile=False, visualize=False, name_feats=None, augment=False, embed=None):
 
-        Args:
-            x (torch.Tensor): The input tensor.
-            profile (bool, optional): If True, profile the computation time for each layer. Defaults to False.
-            visualize (bool, optional): If True, save feature maps for visualization. Defaults to False.
-            txt_feats (torch.Tensor): The text features, use it if it's given. Defaults to None.
-            augment (bool, optional): If True, perform data augmentation during inference. Defaults to False.
-            embed (list, optional): A list of feature vectors/embeddings to return.
+        if name_feats is None:
+            if hasattr(self, 'name_feats'):
+                name_feats = self.txt_feats  # 如果存在 name_feats 属性，使用它
+            elif hasattr(self, 'txt_feats'):
+                name_feats = self.txt_feats  # 如果存在 txt_feats 属性，使用它
+            else:
+                raise AttributeError("Neither 'name_feats' nor 'txt_feats' exists on the object.")
 
-        Returns:
-            (torch.Tensor): Model's output tensor.
-        """
-        txt_feats = (self.txt_feats if txt_feats is None else txt_feats).to(device=x.device, dtype=x.dtype)
-        if len(txt_feats) != len(x):
-            txt_feats = txt_feats.repeat(len(x), 1, 1)
-        ori_txt_feats = txt_feats.clone()
+        name_feats = name_feats.to(device=x.device, dtype=x.dtype)
+        if len(name_feats) != len(x): #对其
+            name_feats = name_feats.repeat(len(x), 1, 1)
+        ori_name_feats = name_feats.clone() #我觉得完全没必要克隆
         y, dt, embeddings = [], [], []  # outputs
         for m in self.seqential_model:  # except the head part
             if m.f != -1:  # if not from previous layer
@@ -651,11 +614,11 @@ class WorldModel(DetectionModel):
             if profile:
                 self._profile_one_layer(m, x, dt)
             if isinstance(m, C2fAttn):
-                x = m(x, txt_feats)
-            elif isinstance(m, WorldDetect):
-                x = m(x, ori_txt_feats)
+                x = m(x, name_feats)
             elif isinstance(m, ImagePoolingAttn):
-                txt_feats = m(x, txt_feats)
+                name_feats = m(x, name_feats)
+            elif isinstance(m, WorldDetect):
+                x = m(x, ori_name_feats) #文本特征
             else:
                 x = m(x)  # run
 
@@ -668,19 +631,13 @@ class WorldModel(DetectionModel):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
         return x
 
-    def loss(self, batch, preds=None):
-        """
-        Compute loss.
+    def loss(self, batch, preds=None): #重载损失
 
-        Args:
-            batch (dict): Batch to compute loss on.
-            preds (torch.Tensor | List[torch.Tensor]): Predictions.
-        """
         if not hasattr(self, "criterion"):
             self.criterion = self.init_criterion()
 
         if preds is None:
-            preds = self.forward(batch["img"], txt_feats=batch["txt_feats"])
+            preds = self.forward(batch["img"], name_feats=batch["name_feats"]) #前向传播是图像和文本特征
         return self.criterion(preds, batch)
 
 
@@ -846,7 +803,7 @@ def attempt_load_weights(model_pts, device=None, inplace=True, fuse=False):
     return ensemble
 
 
-def attribute_assignment(ckpt, model_pt, device=None, inplace=True, fuse=False):
+def attribute_assignment( model_pt, device=None, inplace=True, fuse=False):
     """Loads a single model weights."""
     ckpt, model_pt = load_download_model(model_pt)  # load ckpt  下载模型
    
@@ -869,7 +826,7 @@ def attribute_assignment(ckpt, model_pt, device=None, inplace=True, fuse=False):
             m.recompute_scale_factor = None  # torch 1.11.0 compatibility
 
     # Return model and ckpt
-    return ckpt,model
+    return ckpt, model
 
 
 def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
@@ -948,11 +905,11 @@ def parse_model(model_dict, ch, verbose=True):  # 通道是为了深拷贝
                 c2 = make_divisible(min(c2, max_channels) * width, 8) #成宽超参数
                 
                 
-            # if m is C2fAttn:
-            #     args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
-            #     args[2] = int(
-            #         max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2]
-            #     )  # num heads
+            if m is C2fAttn:
+                args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)  # embed channels
+                args[2] = int(
+                    max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2]
+                )  # num heads
 
             args = [c1, c2, *args[1:]] # imp 总结 输入前一层 输出 第一个参数成宽度超参数 剩下的就是后面的参数
             
@@ -1037,34 +994,23 @@ def create_model_dict(model_yaml):
     import re
 
     model_path = Path(model_yaml)
-    # if model_path.stem in (f"yolov{d}{x}6" for x in "nsmlx" for d in (5, 8)):
-    #     new_stem = re.sub(r"(\d+)([nslmx])6(.+)?$", r"\1\2-p6\3", model_path.stem)
-    #     LOGGER.warning(f"WARNING ⚠️ Ultralytics YOLO P6 models now use -p6 suffix. Renaming {model_path.stem} to {new_stem}.")
-    #     model_path = model_path.with_name(new_stem + model_path.suffix)
-    
-# (\d+)：匹配一个或多个数字，(\d+) 是一个捕获组，它会捕获匹配到的数字。
-# ([nslmx])：匹配单个字符，这个字符必须是 n、s、l、m 或 x 中的一个。它也是一个捕获组。
-# (.+)?：匹配任意字符序列（至少一个字符），(.+)? 是一个可选的捕获组，表示这个部分是可选的，即可以有，也可以没有。
+
     unified_path = re.sub(r"(\d+)([nslmx])(.+)?$", r"\1\3", str(model_path))  # i.e. yolov8x.yaml -> yolov8.yaml
-    model_yaml = check_yaml(unified_path, hard=False) or check_yaml(model_path) #生成绝对路经
+    try:
+        model_yaml = check_yaml(model_path)
+    except Exception as e:
+        print(f"Error parsing {model_path}: {e}")
+        model_yaml = check_yaml(unified_path, hard=False)
+
     model_dict = yaml_load(model_yaml)  # model dict
-    model_dict["scale"] = guess_model_scale(model_path) #加入尺度信息
+    if "scale" not in model_dict or model_dict["scale"] is None:
+        model_dict["scale"] = guess_model_scale(model_path)
     model_dict["model_name"] = str(model_path) #加入文件路径
     return model_dict
 
 
 def guess_model_scale(model_path):
-    """
-    Takes a path to a YOLO model's YAML file as input and extracts the size character of the model's scale. The function
-    uses regular expression matching to find the pattern of the model scale in the YAML file name, which is denoted by
-    n, s, m, l, or x. The function returns the size character of the model scale as a string.
 
-    Args:
-        model_path (str | Path): The path to the YOLO model's YAML file.
-
-    Returns:
-        (str): The size character of the model's scale, which can be n, s, m, l, or x.
-    """
     with contextlib.suppress(AttributeError):
         import re
 

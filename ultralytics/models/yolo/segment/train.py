@@ -26,7 +26,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
 
         return model
 
-    def generate_loss_names_and_validator(self):
+    def _get_loss_names_validator(self):
         """Return an instance of SegmentationValidator for validation of YOLO model."""
         self.loss_names = "box_loss", "seg_loss", "cls_loss", "dfl_loss"
         return yolo.segment.SegmentationValidator(

@@ -83,8 +83,8 @@ def seed_worker(worker_id):  # noqa
 
 def build_yolo_dataset(args, img_path, data_dict, batch_size, mode="train", rect=False, stride=32, multi_modal=False):
     """Build YOLO Dataset."""
-    dataset = YOLOMultiModalDataset if multi_modal else YOLODataset
-    return dataset(
+    dataset_cls = YOLOMultiModalDataset if multi_modal else YOLODataset
+    return dataset_cls(
         img_path=img_path,
         data_dict=data_dict,
         batch_size=batch_size,
@@ -128,7 +128,7 @@ def build_grounding(args, img_path, json_file, batch, mode="train", rect=False, 
 
 def build_dataloader(dataset, batch_size, workers, shuffle=True, rank=-1):
     """Return an InfiniteDataLoader or DataLoader for training or validation set."""
-    batch_size = min(batch_size, len(dataset))
+    batch_size = min(batch_size, len(dataset)) #魔鬼细节
     nd = torch.cuda.device_count()  # number of CUDA devices
     nw = min(os.cpu_count() // max(nd, 1), workers)  # number of workers
     sampler = None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
@@ -173,7 +173,7 @@ def check_source(source):
     return source, webcam, screenshot, from_img, in_memory, tensor
 
 
-def load_inference_source(source=None, batch=1, vid_stride=1, buffer=False):
+def load_inference_source(source=None, batch=1, vid_stride=1, buffer=False, fraction=1):
     """
     Loads an inference source for object detection and applies necessary transformations.
 
@@ -201,7 +201,7 @@ def load_inference_source(source=None, batch=1, vid_stride=1, buffer=False):
     elif from_img:
         dataset = LoadPilAndNumpy(source)
     else:
-        dataset = LoadImagesAndVideos(source, batch=batch, vid_stride=vid_stride)
+        dataset = LoadImagesAndVideos(source, batch=batch, vid_stride=vid_stride,fraction=fraction)
 
     # Attach source types to the dataset
     setattr(dataset, "source_type", source_type)

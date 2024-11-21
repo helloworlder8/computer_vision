@@ -77,13 +77,13 @@ class ClassificationValidator(BaseValidator):
         self.metrics.process(self.targets, self.pred)
         return self.metrics.results_dict
 
-    def build_dataset(self, img_path):
+    def _build_dataset(self, img_path):
         """Creates and returns a ClassificationDataset instance using given image path and preprocessing parameters."""
         return ClassificationDataset(root=img_path, args=self.args, augment=False, prefix=self.args.split)
 
     def get_dataloader(self, dataset_str, batch_size):
         """Builds and returns a data loader for classification tasks with given parameters."""
-        dataset = self.build_dataset(dataset_str)
+        dataset = self._build_dataset(dataset_str)
         return build_dataloader(dataset, batch_size, self.args.workers, rank=-1)
 
     def print_write_results(self):

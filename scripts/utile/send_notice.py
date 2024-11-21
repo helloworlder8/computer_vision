@@ -21,3 +21,5 @@ def send_notice_by_task(metrics,task):
             f"metrics/mAP50(M): {metrics.results_dict['metrics/mAP50(M)']}, "
             f"metrics/mAP50-95(M): {metrics.results_dict['metrics/mAP50-95(M)']}, "
             f"Fitness: {metrics.results_dict['fitness']}") 
+    else:
+        send_notice("yes")

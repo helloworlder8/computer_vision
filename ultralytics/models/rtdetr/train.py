@@ -50,7 +50,7 @@ class RTDETRTrainer(DetectionTrainer):
             model.load(weights)
         return model
 
-    def build_dataset(self, img_path, mode="val", batch_size=None):
+    def _build_dataset(self, img_path, mode="val", batch_size=None):
         """
         Build and return an RT-DETR dataset for training or validation.
 
@@ -74,7 +74,7 @@ class RTDETRTrainer(DetectionTrainer):
             data_dict=self.data_dict,
         )
 
-    def generate_loss_names_and_validator(self):
+    def _get_loss_names_validator(self):
         """
         Returns a DetectionValidator suitable for RT-DETR model validation.
 

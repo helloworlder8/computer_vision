@@ -32,10 +32,10 @@ def get_weight_size(path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='result/Comparative_experiment_exp/yolov10-seg_0.848/weights/last.pt', help='trained weights path')
+    parser.add_argument('--weights', type=str, default='/home/easyits/ang/RM-RDD_COMP_EXP/yolov11s.yaml/weights/best.pt', help='trained weights path')
     parser.add_argument('--batch', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--imgs', nargs='+', type=int, default=[640, 640], help='[height, width] image sizes')
-    parser.add_argument('--device', default='3', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--warmup', default=200, type=int, help='warmup time')
     parser.add_argument('--num_time', default=1000, type=int, help='test time')
     parser.add_argument('--half', action='store_true', default=False, help='fp16 mode.')
