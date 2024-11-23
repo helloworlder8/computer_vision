@@ -1,6 +1,8 @@
 
 import warnings
 warnings.filterwarnings('ignore')
+project="../exp/24-11-21-yolo-world"
+name1="RM_RDD_yolov8x-world-24-11-21-head-only-fine-tune"
 """RTDETR 训练"""
 # from ultralytics import RTDETR
 
@@ -117,7 +119,7 @@ warnings.filterwarnings('ignore')
 
 
 from ultralytics.models.yolo.world import WorldTrainer
-args = dict(model_name='runs/detect/train2/weights/last.pt', data='/home/easyits/ang/datasets/RM-RDD/RM-RDD-20.yaml', epochs=300,resume_pt= 'runs/detect/train2/weights/last.pt',resume= True)
+args = dict(model_name='/home/easyits/ang/checkpoints/24-11-20-RM_RDD_yolov8x.pt', data='/home/easyits/ang/datasets/RM-RDD/RM-RDD-20.yaml', epochs=300,resume_pt= 'runs/detect/train2/weights/last.pt',resume= False,freeze =22,project=project,name=name1)
 trainer = WorldTrainer(overrides=args) #模型 数据 轮次
 trainer.train()
 

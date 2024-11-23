@@ -307,7 +307,7 @@ class Results(SimpleClass):
                 )
             idx = pred_boxes.cls if pred_boxes else range(len(pd_masks))
             annotator.masks(pd_masks.data, colors=[colors(x, True) for x in idx], im_gpu=im_gpu)
-
+        names = {0: 'D00', 1: 'D01', 2: 'D02', 3: 'D03', 4: 'D04', 5: 'D05', 6: 'D06', 7: 'D07'}
         # Plot Detect results
         if pred_boxes is not None and show_boxes:
             for d in reversed(pred_boxes):

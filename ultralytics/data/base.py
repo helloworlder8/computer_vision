@@ -40,8 +40,8 @@ class BaseDataset(Dataset):
         super().__init__()
         self.img_path = img_path
         self.fraction = fraction #训练数据集比例
-        self.im_files = self.get_img_files()
         self.prefix = prefix #
+        self.im_files = self.get_img_files()
         self.single_cls = single_cls #单类
         self.labels = self.get_labels()
         self.update_labels(include_class=classes)  # single_cls and include_class

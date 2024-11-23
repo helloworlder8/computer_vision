@@ -232,7 +232,7 @@ class BaseTrainer:
   
         # Determine freeze list
         freeze_list = (
-            self.args.freeze if isinstance(self.args.freeze, list) else range(self.args.self.args.freeze) if isinstance(self.args.freeze, int) else []
+            self.args.freeze if isinstance(self.args.freeze, list) else range(self.args.freeze) if isinstance(self.args.freeze, int) else []
         )
         always_freeze_names = [".dfl"]  # Always freeze these layers
         freeze_layer_names = [f"model.{x}." for x in freeze_list] + always_freeze_names
@@ -787,7 +787,7 @@ class BaseTrainer:
         """Check if resume checkpoint exists and update arguments accordingly."""
         resume_pt = self.args.resume_pt
         resume = self.args.resume #默认false
-        if resume_pt:
+        if resume:
             try:
                 exists = isinstance(resume_pt, (str, Path)) and Path(resume_pt).exists()
                 resume_pt = Path(check_file(resume_pt) if exists else get_latest_run())

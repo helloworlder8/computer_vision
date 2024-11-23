@@ -7,7 +7,7 @@ if __name__ == '__main__':
     model1.val(data=data,
               split='val',
               imgsz=640,
-              batch=1,
+              batch=20,
               IoU=IoU1,
               # rect=False,
               # save_json=True, # if you need to cal coco metrice
@@ -16,31 +16,31 @@ if __name__ == '__main__':
               name=name1,
               )
 
-    model2 = YOLO(model_yaml2)
-    model2.val(data=data,
-              split='val',
-              imgsz=640,
-              batch=1,
-              IoU=IoU2,
-              # rect=False,
-              # save_json=True, # if you need to cal coco metrice
-              device=device,
-              project=project,
-              name=name2,
-              )
+    # model2 = YOLO(model_yaml2)
+    # model2.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=1,
+    #           IoU=IoU2,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name2,
+    #           )
     
-    model3 = YOLO(model_yaml3)
-    model3.val(data=data,
-              split='val',
-              imgsz=640,
-              batch=1,
-              IoU=IoU3,
-              # rect=False,
-              # save_json=True, # if you need to cal coco metrice
-              device=device,
-              project=project,
-              name=name3,
-              )
+    # model3 = YOLO(model_yaml3)
+    # model3.val(data=data,
+    #           split='val',
+    #           imgsz=640,
+    #           batch=1,
+    #           IoU=IoU3,
+    #           # rect=False,
+    #           # save_json=True, # if you need to cal coco metrice
+    #           device=device,
+    #           project=project,
+    #           name=name3,
+    #           )
     
     # model4 = YOLO(model_yaml4)
     # model4.val(data=data,

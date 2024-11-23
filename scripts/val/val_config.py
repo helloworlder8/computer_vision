@@ -5,9 +5,9 @@ from pathlib import Path
 # 获取当前脚本的相对路径
 current_file_path = Path(__file__)
 current_directory = current_file_path.parent
-data = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-FINE.yaml'))
+data = str(current_directory / Path('../../../datasets/RM-RDD/RM-RDD-20.yaml'))
 # data = "coco128.yaml"
-model_yaml1='/home/easyits/ang/RM-RDD_COMP_EXP/yolov8s.yaml/weights/best.pt'
+model_yaml1='RM_RDD_yolov8x-world-24-11-21-fine-turn.pt'
 model_yaml2='/home/easyits/ang/RM-RDD_COMP_EXP/yolov9s_0.653/weights/best.pt'
 model_yaml3='/home/easyits/ang/RM-RDD_COMP_EXP/yolov10/weights/best.pt'
 # model_yaml1='/home/easyits/ang/RM-RDD_COMP_EXP/yolov3s.yaml/weights/best.pt'
@@ -20,8 +20,8 @@ model_yaml7='/home/easyits/ang/RM-RDD_COMP_EXP/yolov10/weights/best.pt'
 model_yaml8='/home/easyits/ang/RM-RDD_COMP_EXP/yolov11s.yaml/weights/best.pt'
 # model_yaml5='run/BANANA-NEW/ALSSn-seg-MSCAM-last_0.916/weights/last.pt'
 
-project="BANANA_val"
-name1='M0'
+project="temp"
+name1='RM_RDD_yolov8x-world-24-11-21-fine-turn.pt'
 name2='M1'
 name3='M2'
 name4='M3'
