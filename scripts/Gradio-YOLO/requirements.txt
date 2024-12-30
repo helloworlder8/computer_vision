@@ -1,0 +1,11 @@
+ultralytics>=8.0.223
+gradio>=4.8.0
+gradio_imageslider
+opencv-python
+matplotlib
+numpy
+pandas
+pyyaml
+pillow>=10.1.0
+wget>=3.2
+rich>=12.2.0

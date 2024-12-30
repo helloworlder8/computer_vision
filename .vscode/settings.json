@@ -1,0 +1,28 @@
+{
+    "search.exclude": {
+        "**/fastsam":    true,
+        "**/nas":        true,
+        "**/rtdetr":     true,
+        "**/sam":        true,
+        "examples":      true,
+        "CLIP":      true,
+    },
+        "files.exclude": {
+        "**/fastsam":     true,
+        "**/nas":         true,
+        "**/rtdetr":      true,
+        "**/sam":         true,
+        "examples":       true,
+        // "CLIP":      true,
+    },
+    "python.analysis.exclude": [
+        "**/fastsam",
+        "**/nas",
+        "**/rtdetr",
+        "**/sam",
+        "examples",
+        "CLIP"
+    ],
+    "editor.wrappingColumn": 0
+
+}
