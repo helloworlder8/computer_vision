@@ -21,7 +21,7 @@
 
 ### 迭代优化的标注工作流
 <h3 align="center">
-    <a><img src="docs/迭代优化的标注工作流.PNG" width="400"></a>
+    <a><img src="迭代优化的标注工作流.PNG" width="400"></a>
 </h3>
 
 ### MSCA模块
