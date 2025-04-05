@@ -1,0 +1,166 @@
+Metadata-Version: 2.2
+Name: ultralytics
+Version: 8.2.60
+Summary: Ultralytics YOLOv8 for SOTA object detection, multi-object tracking, instance segmentation, pose estimation and image classification.
+Author: Glenn Jocher, Ayush Chaurasia, Jing Qiu
+Maintainer: Glenn Jocher, Ayush Chaurasia, Jing Qiu
+License: AGPL-3.0
+Project-URL: Bug Reports, https://github.com/ultralytics/ultralytics/issues
+Project-URL: Funding, https://ultralytics.com
+Project-URL: Source, https://github.com/ultralytics/ultralytics/
+Keywords: machine-learning,deep-learning,computer-vision,ML,DL,AI,YOLO,YOLOv3,YOLOv5,YOLOv8,HUB,Ultralytics
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Scientific/Engineering :: Image Recognition
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Microsoft :: Windows
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy<2.0.0,>=1.23.0
+Requires-Dist: matplotlib>=3.3.0
+Requires-Dist: opencv-python>=4.6.0
+Requires-Dist: pillow>=7.1.2
+Requires-Dist: pyyaml>=5.3.1
+Requires-Dist: requests>=2.23.0
+Requires-Dist: scipy>=1.4.1
+Requires-Dist: torch>=1.8.0
+Requires-Dist: torchvision>=0.9.0
+Requires-Dist: tqdm>=4.64.0
+Requires-Dist: psutil
+Requires-Dist: py-cpuinfo
+Requires-Dist: pandas>=1.1.4
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: ultralytics-thop>=2.0.0
+Provides-Extra: dev
+Requires-Dist: ipython; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: coverage[toml]; extra == "dev"
+Requires-Dist: mkdocs>=1.6.0; extra == "dev"
+Requires-Dist: mkdocs-material>=9.5.9; extra == "dev"
+Requires-Dist: mkdocstrings[python]; extra == "dev"
+Requires-Dist: mkdocs-jupyter; extra == "dev"
+Requires-Dist: mkdocs-redirects; extra == "dev"
+Requires-Dist: mkdocs-ultralytics-plugin>=0.0.49; extra == "dev"
+Provides-Extra: export
+Requires-Dist: onnx>=1.12.0; extra == "export"
+Requires-Dist: coremltools>=7.0; (platform_system != "Windows" and python_version <= "3.11") and extra == "export"
+Requires-Dist: openvino>=2024.0.0; extra == "export"
+Requires-Dist: tensorflow>=2.0.0; extra == "export"
+Requires-Dist: tensorflowjs>=3.9.0; extra == "export"
+Requires-Dist: keras; extra == "export"
+Requires-Dist: flatbuffers<100,>=23.5.26; platform_machine == "aarch64" and extra == "export"
+Requires-Dist: numpy==1.23.5; platform_machine == "aarch64" and extra == "export"
+Requires-Dist: h5py!=3.11.0; platform_machine == "aarch64" and extra == "export"
+Provides-Extra: explorer
+Requires-Dist: lancedb; extra == "explorer"
+Requires-Dist: duckdb<=0.9.2; extra == "explorer"
+Requires-Dist: streamlit; extra == "explorer"
+Provides-Extra: logging
+Requires-Dist: comet; extra == "logging"
+Requires-Dist: tensorboard>=2.13.0; extra == "logging"
+Requires-Dist: dvclive>=2.12.0; extra == "logging"
+Provides-Extra: extra
+Requires-Dist: hub-sdk>=0.0.8; extra == "extra"
+Requires-Dist: ipython; extra == "extra"
+Requires-Dist: albumentations>=1.4.6; extra == "extra"
+Requires-Dist: pycocotools>=2.0.7; extra == "extra"
+
+
+<h1 align="center">
+    <p>可以一目十行的ultralytics献给宝子们</p>
+</h1>
+
+📝训练验证可视化以及数据转换等自动化脚本目录 scripts
+
+🤗 **论文引用以及相关介绍**
+* [ALSS-YOLO: An Adaptive Lightweight Channel Split and Shuffling Network for TIR Wildlife Detection in UAV Imagery](docs/ALSS-YOLO.md)
+📝[paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10680397)
+
+* [Iterative Optimization Annotation Pipeline and ALSS-YOLO-Seg for Efficient Banana Plantation Segmentation in UAV Imagery](docs/ALSS-YOLO-seg.md)
+📝[paper](https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2024.1508549/abstract)
+
+## 文档快速索引
+[评估指标](docs/Metrics.md)
+
+[显示](docs/Display.md)
+
+[数据集加载和处理](docs/Datasets.md)
+
+## 已通过测试的部分
+> `script/bug_test.py`
+
+
+
+## 重要函数汇总
+
+
+### 训练入口
+- self.trainer.train()
+
+
+### 单卡训练
+- def _single_card_training(self, world_size=1):
+
+
+### 获取数据集
+- self.train_loader = self.get_dataloader(self.trainset, batch_size=batch_size, rank=RANK, mode="train")
+
+
+### 数据通过模型
+- self.loss, self.loss_items = self.model(batch)
+- def loss(self, batch, preds=None): 计算损失
+- x = m(x)  # 前向传播
+
+### 分割检测头
+- class Segment(Detect):
+
+
+### 语义分割损失计算
+- class SegmentationLoss(DetectionLoss):
+
+### 解析模型
+- def parse_model(model_dict, ch, verbose=True):
+
+
+### 验证模型
+- self.metrics, self.fitness = self.validate()
+
+
+### 前向传播
+- x = m(x)  # run
+
+### IOU改进
+支持通过传参改变iou
+- def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, EIoU=False, SIoU=False,FineSIoU= False, WIoU=False, Focal=False, pow=1, gamma=0.5, scale=False, eps=1e-7):
+
+
+### 推理阶段
+- preds = self.inference(new_img, *args, **kwargs)
+
+
+
+### 分割头
+- elif m in {Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}
+
+
+
+### 预测置信度
+- custom = {"conf": 0.4, "batch": 1, "save": False, "mode": "predict"}
+
+
+

@@ -1,0 +1,51 @@
+# 图片格式
+*.jpg
+*.jpeg
+*.png
+*.svg
+*.gif
+
+# 视频格式
+*.mp4
+*.avi
+.ipynb_checkpoints
+*/__pycache__
+
+# 日志格式
+*.log
+*.datas
+# *.txt
+
+# 生成文件
+*.pdf
+*.xlsx
+*.csv
+
+# 参数文件
+*.yaml
+*.json
+
+# 压缩文件格式
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# 字体格式
+*.ttc
+*.ttf
+*.otf
+
+# 模型文件
+*.pt
+*.db
+
+/flagged
+/run
+!requirements.txt
+!cls_name/*
+!model_config/*
+!img_examples/*
+!packages.txt
+
+app copy.py

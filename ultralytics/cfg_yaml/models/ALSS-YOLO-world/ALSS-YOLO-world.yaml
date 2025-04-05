@@ -1,0 +1,50 @@
+
+
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# YOLOv8 object detection model with P3-P5 outputs. For Usage examples see https://docs.ultralytics.com/tasks/detect
+
+# Parameters
+nc: 80 # number of classes
+scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
+  # [depth, width, max_channels]
+  # n: [1, 1, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  n: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  s: [0.33, 0.217, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  m: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
+  l: [1.00, 1.00, 512] # YOLOv8l summary: 365 layers, 43691520 parameters, 43691504 gradients, 165.7 GFLOPs
+  x: [1.00, 1.25, 512] # YOLOv8x summary: 365 layers, 68229648 parameters, 68229632 gradients, 258.5 GFLOPs
+
+# YOLOv8.0n backbone
+backbone:  
+# def __init__(self, C_in, C_out, num_blocks=1, alpha=0.2, beta=1, stride=1, use_identity=False, shortcut_mode=False):
+  - [-1, 1, Conv, [32, 3, 2]] #     32 320 320                         0
+  - [-1, 1, Conv, [64, 3, 2]] #     64 160 160                         1
+  - [-1, 1, Conv, [64, 3, 1]] #     64 160 160                         2
+  - [-1, 1, Conv, [128, 3, 1]] #    128 160 160                        3
+  - [-1, 1, ALSS, [128, 0.4, 0.4, 2, True, 0]] #    128 80 80          4 步长为2的情况再考虑shortcut_mode
+  - [-1, 1, ALSS, [256, 0.4, 0.4, 1, False,-1 ]] #  256 80 80          5 拼
+  - [-1, 1, ALSS, [512, 0.5, 0.5, 2, True, 1]] #    512 40 40          6 
+  - [-1, 1, ALSS, [512, 0.6, 0.6, 1, False,-1]] #   512 40 40      64  7 拼
+  - [-1, 1, ALSS, [1024,0.7, 0.6, 2, True, 2]] #    1024 20 20         8
+  - [-1, 1, SPPF, [1024, 5]]                  #     1024 20 20         9 拼
+
+# YOLOv8.0n head
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 6], 1, Concat, [1]] # cat backbone P4
+  - [-1, 3, C2fAttn, [512, 256, 8]] # 12
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 4], 1, Concat, [1]] # cat backbone P3
+  - [-1, 3, C2fAttn, [256, 128, 4]] # 15 (P3/8-small) 出
+
+  - [15, 1, Conv, [256, 3, 2]]
+  - [[-1, 12], 1, Concat, [1]] # cat head P4
+  - [-1, 3, C2fAttn, [512, 256, 8]] # 18 (P4/16-medium) 出
+
+  - [-1, 1, Conv, [512, 3, 2]]
+  - [[-1, 9], 1, Concat, [1]] # cat head P5
+  - [-1, 3, C2fAttn, [1024, 512, 16]] # 21 (P5/32-large) 出
+
+  - [[15, 18, 21], 1, WorldDetect, [nc, 512, True]] # Detect(P3, P4, P5)
+  # - [[15, 18, 21], 1, Detect, [nc]] # Detect(P3, P4, P5)
